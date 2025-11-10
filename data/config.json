@@ -1,0 +1,18 @@
+{
+    "companyName": "Your Company",
+    "logo": "images/logo.png",
+    "description": "Welcome to our page!",
+    "theme": {
+        "primaryColor": "#ffffff",
+        "secondaryColor": "#000000"
+    },
+    "socialLinks": [
+        { "name": "facebook", "url": "#" },
+        { "name": "instagram", "url": "#" },
+        { "name": "youtube", "url": "#" },
+        { "name": "x", "url": "#" },
+        { "name": "tiktok", "url": "#" }
+    ],
+    "links": [],
+    "campaigns": []
+}
