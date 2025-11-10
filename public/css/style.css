@@ -154,10 +154,22 @@ header {
 input, textarea, button {
     width: 100%;
     padding: 10px;
-    margin: 5px 0 15px 0;
-    border-radius: 6px;
+    margin: 5px 0;
     border: 1px solid #ddd;
     box-sizing: border-box;
+}
+
+input[type="color"] {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    vertical-align: middle;
+}
+
+input[type="text"][size="7"] {
+    width: auto;
+    vertical-align: middle;
 }
 
 button {
@@ -180,7 +192,7 @@ h2 {
 
 .link-admin {
     display: grid;
-    grid-template-columns: auto 1fr 1fr auto auto auto;
+    grid-template-columns: auto 60px 1fr 1fr auto auto;
     gap: 10px;
     align-items: center;
     border: 1px solid #eee;
@@ -215,4 +227,12 @@ h2 {
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid #eee;
+}
+
+.campaign-message {
+    background-color: #007bff;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    width: 100%;
 }

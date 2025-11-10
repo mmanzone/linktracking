@@ -172,7 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="move-up" ${index === 0 ? 'disabled' : ''}>▲</button>
                     <button class="move-down" ${index === config.links.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
-                <img src="${link.icon}" style="width: 40px; height: 40px;">
+                <div>
+                    <img src="${link.icon}" style="width: 40px; height: 40px; vertical-align: middle;">
+                    <input type="file" class="link-icon-upload" style="display: none;">
+                    <button class="change-icon">Change</button>
+                </div>
                 <input type="text" class="link-text-edit" value="${link.text}" placeholder="Link Name">
                 <input type="text" class="link-url-edit" value="${link.url}" placeholder="https://...">
                 <button class="hide-link">${link.visible ? 'Hide' : 'Show'}</button>
@@ -198,6 +202,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let newConfig = { ...config };
             const linkIndex = newConfig.links.findIndex(l => l.id === linkId);
 
+            if (event.target.classList.contains('change-icon')) {
+                event.target.previousElementSibling.click();
+            }
+
             if (event.target.classList.contains('move-up')) {
                 [newConfig.links[linkIndex], newConfig.links[linkIndex - 1]] = [newConfig.links[linkIndex - 1], newConfig.links[linkIndex]];
                 saveConfig(newConfig).then(() => loadAdminContent('links'));
@@ -222,6 +230,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         linksList.addEventListener('change', (event) => {
+            if (event.target.classList.contains('link-icon-upload')) {
+                const file = event.target.files[0];
+                if (file) {
+                    const linkId = event.target.closest('.link-admin').dataset.id;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result.split(',')[1];
+                        fetch('/api/upload', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filename: file.name, content })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            let newConfig = { ...config };
+                            const link = newConfig.links.find(l => l.id === linkId);
+                            link.icon = data.url;
+                            saveConfig(newConfig).then(() => loadAdminContent('links'));
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
             if (event.target.classList.contains('link-text-edit') || event.target.classList.contains('link-url-edit')) {
                 const linkId = event.target.closest('.link-admin').dataset.id;
                 let newConfig = { ...config };
@@ -266,6 +298,8 @@ document.addEventListener('DOMContentLoaded', () => {
             newConfig.campaigns.push({
                 id: Date.now().toString(),
                 name: 'New Campaign',
+                description: '',
+                message: '',
                 startDate: new Date().toISOString(),
                 endDate: new Date().toISOString(),
                 links: []
@@ -281,6 +315,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.target.classList.contains('save-edit-campaign')) {
                 const campaignAdmin = event.target.closest('.campaign-admin');
                 campaign.name = campaignAdmin.querySelector('.campaign-name-edit').value;
+                campaign.description = campaignAdmin.querySelector('.campaign-description-edit').value;
+                campaign.message = campaignAdmin.querySelector('.campaign-message-edit').value;
                 campaign.startDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value).toISOString();
                 campaign.endDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value).toISOString();
                 campaign.links = Array.from(campaignAdmin.querySelectorAll('.campaign-links-edit input:checked')).map(input => input.value);
@@ -301,6 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 `).join('');
                 campaignAdmin.innerHTML = `
                     <input type="text" class="campaign-name-edit" value="${campaign.name}">
+                    <textarea class="campaign-description-edit">${campaign.description || ''}</textarea>
+                    <textarea class="campaign-message-edit">${campaign.message || ''}</textarea>
                     <input type="datetime-local" class="campaign-start-edit" value="${campaign.startDate.slice(0, 16)}">
                     <input type="datetime-local" class="campaign-end-edit" value="${campaign.endDate.slice(0, 16)}">
                     <h4>Links</h4>
@@ -415,12 +453,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         labels: ['Visitor Engagement'],
                         datasets: [
                             {
-                                label: 'Followed Link',
+                                label: `Followed Link (${totalClicks} - ${totalVisits > 0 ? ((totalClicks / totalVisits) * 100).toFixed(1) : 0}%)`,
                                 data: [totalClicks],
                                 backgroundColor: '#36a2eb'
                             },
                             {
-                                label: 'Abandoned',
+                                label: `Abandoned (${abandonedVisits} - ${totalVisits > 0 ? ((abandonedVisits / totalVisits) * 100).toFixed(1) : 0}%)`,
                                 data: [abandonedVisits],
                                 backgroundColor: '#ff6384'
                             }
@@ -461,14 +499,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-                // Browser and Location data would require a more sophisticated analytics setup
-                // For now, I will use placeholder data for the charts.
+                const browserData = {};
+                analytics.visits.forEach(visit => {
+                    const ua = visit.userAgent || '';
+                    let browser = 'Other';
+                    if (ua.includes('Firefox')) browser = 'Firefox';
+                    else if (ua.includes('Chrome')) browser = 'Chrome';
+                    else if (ua.includes('Safari')) browser = 'Safari';
+                    browserData[browser] = (browserData[browser] || 0) + 1;
+                });
+
                 new Chart(document.getElementById('browser-chart'), {
                     type: 'pie',
                     data: {
-                        labels: ['Chrome', 'Safari', 'Firefox', 'Other'],
+                        labels: Object.keys(browserData),
                         datasets: [{
-                            data: [60, 25, 10, 5],
+                            data: Object.values(browserData),
                             backgroundColor: ['#4bc0c0', '#ffcd56', '#ff9f40', '#c9cbcf']
                         }]
                     },
@@ -480,6 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
+                // Location data remains a placeholder
                 new Chart(document.getElementById('location-chart'), {
                     type: 'pie',
                     data: {
@@ -492,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     options: {
                         responsive: true,
                         plugins: {
-                            title: { display: true, text: 'Visitors by Location' }
+                            title: { display: true, text: 'Visitors by Location (Placeholder)' }
                         }
                     }
                 });

@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (activeCampaign) {
+                document.body.insertAdjacentHTML('afterbegin', `<div class="campaign-message">${activeCampaign.message}</div>`);
                 linksToShow = activeCampaign.links.map(linkId => config.links.find(l => l.id === linkId));
             }
 
