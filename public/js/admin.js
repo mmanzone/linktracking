@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const linkOrder = Array.from(campaignAdmin.querySelectorAll('.campaign-link-row')).map(row => row.dataset.id);
                 campaign.links = linkOrder.filter(id => campaignAdmin.querySelector(`.campaign-link-row[data-id="${id}"] input[type="checkbox"]`).checked);
 
-                saveConfig(newConfig).then(() => loadAdminContent('campaigns'));
+                saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
             }
 
             if (event.target.classList.contains('cancel-edit-campaign')) {
@@ -397,19 +397,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `).join('');
                 campaignAdmin.innerHTML = `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;">
+                    <div style="width: 100%;">
                         <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
                         <label>Admin Description: <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
-                        <label>Banner Message: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40"></label>
-                        <div>
+                        <label>Banner Message: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40" style="width: 100%;"></label>
+                        <div style="display: flex; gap: 10px;">
                             <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
                             <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
                         </div>
+                        <h4>Links</h4>
+                        <div class="campaign-links-edit">${campaignLinksHtml}</div>
+                        <div class="button-container">
+                            <button class="save-edit-campaign">Save</button>
+                            <button class="cancel-edit-campaign">Cancel</button>
+                        </div>
                     </div>
-                    <h4>Links</h4>
-                    <div class="campaign-links-edit">${campaignLinksHtml}</div>
-                    <button class="save-edit-campaign">Save</button>
-                    <button class="cancel-edit-campaign">Cancel</button>
                 `;
             }
 
@@ -607,13 +609,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Filter by date
             const now = new Date();
             let startDate = new Date();
+            let endDate = new Date(); // Use a separate end date
+
             if (selectedDateFilter === 'all') {
                 startDate = new Date(0);
             } else if (selectedDateFilter === 'yesterday') {
                 startDate.setDate(now.getDate() - 1);
                 startDate.setHours(0, 0, 0, 0);
-                now.setDate(now.getDate() - 1);
-                now.setHours(23, 59, 59, 999);
+                endDate.setDate(now.getDate() - 1);
+                endDate.setHours(23, 59, 59, 999);
             } else if (selectedDateFilter === '1') { // Today
                 startDate.setHours(0, 0, 0, 0);
             } else {
@@ -622,11 +626,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             filteredAnalytics.visits = filteredAnalytics.visits.filter(v => {
                 const visitDate = new Date(v.timestamp);
-                return visitDate >= startDate && visitDate <= now;
+                return visitDate >= startDate && visitDate <= endDate;
             });
             filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => {
                 const clickDate = new Date(c.timestamp);
-                return clickDate >= startDate && clickDate <= now;
+                return clickDate >= startDate && clickDate <= endDate;
             });
 
             // Populate campaign filter based on date filter

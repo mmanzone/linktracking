@@ -18,7 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const header = document.querySelector('header');
             header.style.backgroundColor = config.theme.primaryColor;
-            header.style.color = config.theme.primaryTextColor || getContrastYIQ(config.theme.primaryColor);
+            const primaryTextColor = config.theme.primaryTextColor || getContrastYIQ(config.theme.primaryColor);
+            header.style.color = primaryTextColor;
             
             document.documentElement.style.setProperty('--secondary-color', config.theme.secondaryColor);
             document.documentElement.style.setProperty('--secondary-text-color', config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor));
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (link.url && link.url !== '#') {
                     const a = document.createElement('a');
                     a.href = link.url;
-                    a.innerHTML = `<img src="/images/icons/${link.name}.svg" alt="${link.name}" style="filter: ${textColor === 'white' ? 'invert(1)' : 'none'};">`;
+                    a.innerHTML = `<img src="/images/icons/${link.name}.svg" alt="${link.name}" style="filter: ${primaryTextColor === 'white' ? 'invert(1)' : 'none'};">`;
                     socialLinksContainer.appendChild(a);
                 }
             });
