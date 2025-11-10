@@ -47,7 +47,6 @@ initializeRedisData();
 // --- End Data Initialization ---
 
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, '..')));
 
 app.get('/api/config', async (req, res) => {
   const config = await redis.get('config');
