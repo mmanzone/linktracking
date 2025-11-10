@@ -7,14 +7,25 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <h1>Admin Panel</h1>
-    <div id="login">
-        <input type="password" id="password" placeholder="Password">
-        <button id="login-btn">Login</button>
+    <div class="admin-container">
+        <h1>Admin Panel</h1>
+        <div id="login">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Login</button>
+        </div>
+        <div id="admin-panel" style="display: none;">
+            <div class="tabs">
+                <button class="tab-link active" data-tab="general">General</button>
+                <button class="tab-link" data-tab="links">Links</button>
+                <button class="tab-link" data-tab="campaigns">Campaigns</button>
+                <button class="tab-link" data-tab="analytics">Analytics</button>
+            </div>
+            <div id="admin-content">
+                <!-- Admin content will be dynamically loaded here -->
+            </div>
+        </div>
     </div>
-    <div id="admin-content" style="display: none;">
-        <!-- Admin content will go here -->
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/js/admin.js"></script>
 </body>
 </html>

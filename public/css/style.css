@@ -101,12 +101,51 @@ header {
 }
 
 /* Admin Panel Specifics */
+/* ... existing styles ... */
+
+/* Admin Panel Specifics */
+.admin-container {
+    width: 100%;
+    max-width: 960px;
+}
+
+.tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+
+.tab-link {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    background-color: transparent;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #606770;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-link.active {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
 #admin-content {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
+/* ... rest of the styles ... */
 
 #login {
     text-align: center;
@@ -139,7 +178,10 @@ h2 {
     margin-top: 20px;
 }
 
-.link-admin {
+.campaign-admin {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     border: 1px solid #eee;
     padding: 10px;
     margin-bottom: 10px;
