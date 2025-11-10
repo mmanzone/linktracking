@@ -1,43 +1,147 @@
+/* General Body Styles */
 body {
-    font-family: sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #1c1e21;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
 }
 
+/* Main Content Container */
+.container {
+    max-width: 680px;
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Header Styles */
 header {
     text-align: center;
-    padding: 20px;
-}
-
-#logo {
-    max-width: 150px;
-    margin-bottom: 10px;
-}
-
-main {
-    padding: 20px;
-}
-
-#social-links {
-    text-align: center;
+    padding: 20px 0;
     margin-bottom: 20px;
 }
 
-#social-links a {
-    margin: 0 10px;
+#logo {
+    max-width: 120px;
+    height: auto;
+    border-radius: 50%;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-#links .link {
+#company-name {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+#description {
+    font-size: 1rem;
+    color: #606770;
+    margin-top: 8px;
+}
+
+/* Social Links */
+#social-links {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 10px 0;
+}
+
+#social-links a {
+    margin: 0 12px;
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+#social-links a:hover {
+    transform: scale(1.1);
+}
+
+#social-links img {
+    width: 28px;
+    height: 28px;
+}
+
+/* Link List Styles */
+#links {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.link {
     display: flex;
     align-items: center;
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 12px;
     text-decoration: none;
-    color: #000;
+    color: #1c1e21;
+    font-size: 1rem;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-#links .link img {
-    max-width: 40px;
-    margin-right: 10px;
+.link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.link img {
+    width: 40px;
+    height: 40px;
+    margin-right: 15px;
+    border-radius: 8px;
+}
+
+/* Admin Panel Specifics */
+#admin-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+#login {
+    text-align: center;
+}
+
+input, textarea, button {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0 15px 0;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+h2 {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-top: 20px;
+}
+
+.link-admin {
+    border: 1px solid #eee;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
 }
