@@ -1,7 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Redis } = require('@upstash/redis');
-const path = require('path');
 
 const app = express();
 
