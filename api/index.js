@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Redis } = require('@upstash/redis');
+const { put } = require('@vercel/blob');
 
 const app = express();
 
@@ -16,7 +17,7 @@ const initializeRedisData = async () => {
   if (!configExists) {
     await redis.set('config', {
       companyName: 'Your Company',
-      logo: 'images/logo.png',
+      logo: '/images/logo.png',
       description: 'Welcome to our page!',
       theme: { primaryColor: '#ffffff', secondaryColor: '#000000' },
       socialLinks: [
@@ -45,7 +46,15 @@ const initializeRedisData = async () => {
 initializeRedisData();
 // --- End Data Initialization ---
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
+
+app.post('/api/upload', async (req, res) => {
+    const { filename, content } = req.body;
+    const blob = await put(filename, Buffer.from(content, 'base64'), {
+        access: 'public',
+    });
+    res.json({ url: blob.url });
+});
 
 app.get('/api/config', async (req, res) => {
   const config = await redis.get('config');

@@ -32,7 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 adminContentDiv.innerHTML = `
                     <h2>Landing Page Content</h2>
                     <label>Company Name: <input type="text" id="company-name-input" value="${config.companyName}"></label><br>
-                    <label>Logo URL: <input type="text" id="logo-input" value="${config.logo}"></label><br>
+                    <label>Logo: <input type="file" id="logo-upload"></label><br>
+                    <img id="logo-preview" src="${config.logo}" style="max-width: 100px;"><br>
                     <label>Description: <textarea id="description-input">${config.description}</textarea></label><br>
                     <button id="save-content">Save Content</button>
                     
@@ -74,7 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="link-admin" data-id="${link.id}">
                             <input type="text" class="link-text" value="${link.text}">
                             <input type="text" class="link-url" value="${link.url}">
-                            <input type="text" class="link-icon" value="${link.icon}">
+                            <label>Icon: <input type="file" class="link-icon-upload"></label>
+                            <img src="${link.icon}" style="max-width: 40px;">
                             <input type="checkbox" class="link-visible" ${link.visible ? 'checked' : ''}>
                             <button class="delete-link">Delete</button>
                         </div>
@@ -85,9 +87,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('save-content').addEventListener('click', () => {
                     const newConfig = { ...config };
                     newConfig.companyName = document.getElementById('company-name-input').value;
-                    newConfig.logo = document.getElementById('logo-input').value;
                     newConfig.description = document.getElementById('description-input').value;
                     saveConfig(newConfig);
+                });
+
+                document.getElementById('logo-upload').addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const content = e.target.result.split(',')[1];
+                            fetch('/api/upload', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ filename: file.name, content })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                const newConfig = { ...config };
+                                newConfig.logo = data.url;
+                                document.getElementById('logo-preview').src = data.url;
+                                saveConfig(newConfig);
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
                 });
 
                 document.getElementById('save-theme').addEventListener('click', () => {
@@ -113,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         id: Date.now().toString(),
                         text: 'New Link',
                         url: '#',
-                        icon: 'images/icons/link.svg',
+                        icon: '/images/icons/link.svg',
                         visible: true
                     });
                     saveConfig(newConfig).then(loadAdminContent);
@@ -128,6 +152,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
+                document.getElementById('links-admin').addEventListener('change', (event) => {
+                    if (event.target.classList.contains('link-icon-upload')) {
+                        const file = event.target.files[0];
+                        if (file) {
+                            const linkId = event.target.closest('.link-admin').dataset.id;
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const content = e.target.result.split(',')[1];
+                                fetch('/api/upload', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ filename: file.name, content })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    const newConfig = { ...config };
+                                    const link = newConfig.links.find(l => l.id === linkId);
+                                    link.icon = data.url;
+                                    saveConfig(newConfig).then(loadAdminContent);
+                                });
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    }
+                });
+
                 document.getElementById('save-links').addEventListener('click', () => {
                     const newConfig = { ...config };
                     const linkElements = document.querySelectorAll('.link-admin');
@@ -137,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (link) {
                             link.text = linkElement.querySelector('.link-text').value;
                             link.url = linkElement.querySelector('.link-url').value;
-                            link.icon = linkElement.querySelector('.link-icon').value;
                             link.visible = linkElement.querySelector('.link-visible').checked;
                         }
                     });

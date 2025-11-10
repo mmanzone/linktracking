@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (link.url && link.url !== '#') {
                     const a = document.createElement('a');
                     a.href = link.url;
-                    a.innerHTML = `<img src="images/icons/${link.name}.svg" alt="${link.name}">`;
+                    a.innerHTML = `<img src="/images/icons/${link.name}.svg" alt="${link.name}">`;
                     socialLinksContainer.appendChild(a);
                 }
             });
