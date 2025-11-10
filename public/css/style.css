@@ -178,7 +178,29 @@ h2 {
     margin-top: 20px;
 }
 
+.link-admin {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr auto auto auto;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid #eee;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+}
+
+.link-order {
+    display: flex;
+    flex-direction: column;
+}
+
+.link-order button {
+    padding: 2px 6px;
+    line-height: 1;
+}
+
 .campaign-admin {
+    flex-wrap: wrap;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -186,4 +208,11 @@ h2 {
     padding: 10px;
     margin-bottom: 10px;
     border-radius: 6px;
+}
+
+.campaign-stats-container {
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
 }

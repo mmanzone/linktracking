@@ -65,7 +65,7 @@ app.post('/api/visit', async (req, res) => {
   const analytics = await redis.get('analytics');
   analytics.visits.push({
     timestamp: new Date().toISOString(),
-    ip: req.ip,
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
     userAgent: req.headers['user-agent'],
   });
   await redis.set('analytics', analytics);
@@ -78,7 +78,7 @@ app.post('/api/click', async (req, res) => {
   analytics.clicks.push({
     timestamp: new Date().toISOString(),
     linkId,
-    ip: req.ip,
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
     userAgent: req.headers['user-agent'],
   });
   await redis.set('analytics', analytics);

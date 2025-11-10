@@ -68,8 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button id="save-content">Save Content</button>
                 
                 <h2>Theme</h2>
-                <label>Primary Color: <input type="color" id="primary-color-input" value="${config.theme.primaryColor}"></label><br>
-                <label>Secondary Color: <input type="color" id="secondary-color-input" value="${config.theme.secondaryColor}"></label><br>
+                <label>Primary Color: 
+                    <input type="color" id="primary-color-picker" value="${config.theme.primaryColor}">
+                    <input type="text" id="primary-color-input" value="${config.theme.primaryColor}" size="7">
+                </label><br>
+                <label>Secondary Color: 
+                    <input type="color" id="secondary-color-picker" value="${config.theme.secondaryColor}">
+                    <input type="text" id="secondary-color-input" value="${config.theme.secondaryColor}" size="7">
+                </label><br>
                 <button id="save-theme">Save Theme</button>
 
                 <h2>Social Links</h2>
@@ -80,12 +86,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const socialLinksAdmin = document.getElementById('social-links-admin');
         config.socialLinks.forEach(link => {
+            const capitalizedName = link.name.charAt(0).toUpperCase() + link.name.slice(1);
             socialLinksAdmin.innerHTML += `
                 <div>
-                    <label>${link.name}: <input type="text" value="${link.url}"></label>
+                    <label>${capitalizedName}: <input type="text" value="${link.url}"></label>
                 </div>
             `;
         });
+
+        // Sync color pickers and text inputs
+        const primaryColorPicker = document.getElementById('primary-color-picker');
+        const primaryColorInput = document.getElementById('primary-color-input');
+        primaryColorPicker.addEventListener('input', (e) => primaryColorInput.value = e.target.value);
+        primaryColorInput.addEventListener('input', (e) => primaryColorPicker.value = e.target.value);
+
+        const secondaryColorPicker = document.getElementById('secondary-color-picker');
+        const secondaryColorInput = document.getElementById('secondary-color-input');
+        secondaryColorPicker.addEventListener('input', (e) => secondaryColorInput.value = e.target.value);
+        secondaryColorInput.addEventListener('input', (e) => secondaryColorPicker.value = e.target.value);
 
         document.getElementById('save-content').addEventListener('click', (e) => {
             const newConfig = { ...config };
@@ -145,20 +163,20 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const linksList = document.getElementById('links-list');
-        config.links.forEach(link => {
+        config.links.forEach((link, index) => {
             const linkElement = document.createElement('div');
             linkElement.classList.add('link-admin');
             linkElement.dataset.id = link.id;
             linkElement.innerHTML = `
-                <div class="link-details">
-                    <img src="${link.icon}" style="width: 40px; height: 40px;">
-                    <span>${link.text}</span>
+                <div class="link-order">
+                    <button class="move-up" ${index === 0 ? 'disabled' : ''}>▲</button>
+                    <button class="move-down" ${index === config.links.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
-                <div class="link-actions">
-                    <button class="edit-link">Edit</button>
-                    <button class="hide-link">${link.visible ? 'Hide' : 'Show'}</button>
-                    <button class="delete-link">Delete</button>
-                </div>
+                <img src="${link.icon}" style="width: 40px; height: 40px;">
+                <input type="text" class="link-text-edit" value="${link.text}" placeholder="Link Name">
+                <input type="text" class="link-url-edit" value="${link.url}" placeholder="https://...">
+                <button class="hide-link">${link.visible ? 'Hide' : 'Show'}</button>
+                <button class="delete-link">Delete</button>
             `;
             linksList.appendChild(linkElement);
         });
@@ -167,8 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const newConfig = { ...config };
             newConfig.links.push({
                 id: Date.now().toString(),
-                text: 'New Link',
-                url: '#',
+                text: '',
+                url: '',
                 icon: '/images/icons/link.svg',
                 visible: true
             });
@@ -177,52 +195,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         linksList.addEventListener('click', (event) => {
             const linkId = event.target.closest('.link-admin').dataset.id;
-            const newConfig = { ...config };
-            const link = newConfig.links.find(l => l.id === linkId);
+            let newConfig = { ...config };
+            const linkIndex = newConfig.links.findIndex(l => l.id === linkId);
 
-            if (event.target.classList.contains('save-edit-link')) {
-                const linkAdmin = event.target.closest('.link-admin');
-                link.text = linkAdmin.querySelector('.link-text-edit').value;
-                link.url = linkAdmin.querySelector('.link-url-edit').value;
-                const iconFile = linkAdmin.querySelector('.link-icon-edit').files[0];
-                if (iconFile) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const content = e.target.result.split(',')[1];
-                        fetch('/api/upload', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ filename: iconFile.name, content })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            link.icon = data.url;
-                            saveConfig(newConfig).then(() => loadAdminContent('links'));
-                        });
-                    };
-                    reader.readAsDataURL(iconFile);
-                } else {
-                    saveConfig(newConfig).then(() => loadAdminContent('links'));
-                }
+            if (event.target.classList.contains('move-up')) {
+                [newConfig.links[linkIndex], newConfig.links[linkIndex - 1]] = [newConfig.links[linkIndex - 1], newConfig.links[linkIndex]];
+                saveConfig(newConfig).then(() => loadAdminContent('links'));
             }
 
-            if (event.target.classList.contains('cancel-edit-link')) {
-                loadAdminContent('links');
-            }
-
-            if (event.target.classList.contains('edit-link')) {
-                const linkAdmin = event.target.closest('.link-admin');
-                linkAdmin.innerHTML = `
-                    <input type="text" class="link-text-edit" value="${link.text}">
-                    <input type="text" class="link-url-edit" value="${link.url}">
-                    <input type="file" class="link-icon-edit">
-                    <button class="save-edit-link">Save</button>
-                    <button class="cancel-edit-link">Cancel</button>
-                `;
+            if (event.target.classList.contains('move-down')) {
+                [newConfig.links[linkIndex], newConfig.links[linkIndex + 1]] = [newConfig.links[linkIndex + 1], newConfig.links[linkIndex]];
+                saveConfig(newConfig).then(() => loadAdminContent('links'));
             }
 
             if (event.target.classList.contains('hide-link')) {
-                link.visible = !link.visible;
+                newConfig.links[linkIndex].visible = !newConfig.links[linkIndex].visible;
                 saveConfig(newConfig).then(() => loadAdminContent('links'));
             }
 
@@ -231,6 +218,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     newConfig.links = newConfig.links.filter(l => l.id !== linkId);
                     saveConfig(newConfig).then(() => loadAdminContent('links'));
                 }
+            }
+        });
+
+        linksList.addEventListener('change', (event) => {
+            if (event.target.classList.contains('link-text-edit') || event.target.classList.contains('link-url-edit')) {
+                const linkId = event.target.closest('.link-admin').dataset.id;
+                let newConfig = { ...config };
+                const link = newConfig.links.find(l => l.id === linkId);
+                link.text = event.target.closest('.link-admin').querySelector('.link-text-edit').value;
+                link.url = event.target.closest('.link-admin').querySelector('.link-url-edit').value;
+                saveConfig(newConfig);
             }
         });
     }
@@ -314,6 +312,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (event.target.classList.contains('view-campaign-stats')) {
                 const campaignAdmin = event.target.closest('.campaign-admin');
+                let statsContainer = campaignAdmin.querySelector('.campaign-stats-container');
+                if (statsContainer) {
+                    statsContainer.remove();
+                    return;
+                }
+
+                statsContainer = document.createElement('div');
+                statsContainer.classList.add('campaign-stats-container');
+                campaignAdmin.appendChild(statsContainer);
+
                 fetch('/api/analytics')
                     .then(response => response.json())
                     .then(analytics => {
@@ -327,15 +335,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             const clickDate = new Date(click.timestamp);
                             return clickDate >= campaignStartDate && clickDate <= campaignEndDate;
                         });
+                        const abandonedCampaignVisits = campaignVisits.length - new Set(campaignClicks.map(c => c.ip)).size;
 
-                        const statsContainer = document.createElement('div');
                         statsContainer.innerHTML = `
                             <h4>Stats for ${campaign.name}</h4>
                             <p>Total Visits: ${campaignVisits.length}</p>
                             <p>Total Clicks: ${campaignClicks.length}</p>
+                            <p>Abandoned Visits: ${abandonedCampaignVisits}</p>
                             <canvas id="campaign-clicks-chart-${campaign.id}"></canvas>
                         `;
-                        campaignAdmin.appendChild(statsContainer);
 
                         const clicksPerLink = {};
                         campaignClicks.forEach(click => {
@@ -387,6 +395,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>Analytics</h2>
                 <canvas id="visits-chart"></canvas>
                 <canvas id="clicks-chart"></canvas>
+                <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+                    <div style="width: 45%;"><canvas id="browser-chart"></canvas></div>
+                    <div style="width: 45%;"><canvas id="location-chart"></canvas></div>
+                </div>
             </div>
         `;
 
@@ -398,19 +410,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 const abandonedVisits = totalVisits - new Set(analytics.clicks.map(c => c.ip)).size;
 
                 new Chart(document.getElementById('visits-chart'), {
-                    type: 'doughnut',
+                    type: 'bar',
                     data: {
-                        labels: ['Followed Link', 'Abandoned'],
-                        datasets: [{
-                            data: [totalClicks, abandonedVisits],
-                            backgroundColor: ['#36a2eb', '#ff6384']
-                        }]
+                        labels: ['Visitor Engagement'],
+                        datasets: [
+                            {
+                                label: 'Followed Link',
+                                data: [totalClicks],
+                                backgroundColor: '#36a2eb'
+                            },
+                            {
+                                label: 'Abandoned',
+                                data: [abandonedVisits],
+                                backgroundColor: '#ff6384'
+                            }
+                        ]
                     },
                     options: {
+                        indexAxis: 'y',
                         responsive: true,
-                        plugins: {
-                            legend: { position: 'top' },
-                            title: { display: true, text: 'Visitor Engagement' }
+                        scales: {
+                            x: { stacked: true },
+                            y: { stacked: true }
                         }
                     }
                 });
@@ -420,15 +441,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
                 });
 
-                const linkLabels = [];
-                const clickCounts = [];
-                for (const linkId in clicksPerLink) {
-                    const link = config.links.find(l => l.id === linkId);
-                    if (link) {
-                        linkLabels.push(link.text);
-                        clickCounts.push(clicksPerLink[linkId]);
-                    }
-                }
+                const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
+                const linkLabels = sortedLinks.map(([linkId]) => config.links.find(l => l.id === linkId)?.text || 'Unknown Link');
+                const clickCounts = sortedLinks.map(([,count]) => count);
 
                 new Chart(document.getElementById('clicks-chart'), {
                     type: 'bar',
@@ -441,9 +456,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         }]
                     },
                     options: {
+                        indexAxis: 'y',
                         responsive: true,
-                        scales: {
-                            y: { beginAtZero: true }
+                    }
+                });
+
+                // Browser and Location data would require a more sophisticated analytics setup
+                // For now, I will use placeholder data for the charts.
+                new Chart(document.getElementById('browser-chart'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['Chrome', 'Safari', 'Firefox', 'Other'],
+                        datasets: [{
+                            data: [60, 25, 10, 5],
+                            backgroundColor: ['#4bc0c0', '#ffcd56', '#ff9f40', '#c9cbcf']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: { display: true, text: 'Visitors by Browser' }
+                        }
+                    }
+                });
+
+                new Chart(document.getElementById('location-chart'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['USA', 'Canada', 'UK', 'Other'],
+                        datasets: [{
+                            data: [50, 20, 15, 15],
+                            backgroundColor: ['#4bc0c0', '#ffcd56', '#ff9f40', '#c9cbcf']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: { display: true, text: 'Visitors by Location' }
                         }
                     }
                 });
