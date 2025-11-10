@@ -39,6 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/config')
             .then(response => response.json())
             .then(config => {
+                // Apply theme to admin buttons
+                const buttons = document.querySelectorAll('button');
+                buttons.forEach(button => {
+                    button.style.backgroundColor = config.theme.primaryColor;
+                    button.addEventListener('mouseover', () => button.style.backgroundColor = config.theme.secondaryColor);
+                    button.addEventListener('mouseout', () => button.style.backgroundColor = config.theme.primaryColor);
+                });
+
                 adminContentDiv.innerHTML = ''; // Clear previous content
                 switch (tab) {
                     case 'general':
@@ -61,95 +69,96 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="general-tab" class="tab-content active">
                 <h2>Landing Page Content</h2>
-                <label>Company Name: <input type="text" id="company-name-input" value="${config.companyName}"></label><br>
+                <label>Unit Name: <input type="text" id="company-name-input" value="${config.companyName}"></label><br>
                 <label>Logo: <input type="file" id="logo-upload"></label><br>
                 <img id="logo-preview" src="${config.logo}" style="max-width: 100px;"><br>
-                <label>Description: <textarea id="description-input">${config.description}</textarea></label><br>
+                <label>Introduction Text: <textarea id="description-input">${config.description}</textarea></label><br>
                 <button id="save-content">Save Content</button>
                 
                 <h2>Theme</h2>
-                <label>Primary Color: 
-                    <input type="color" id="primary-color-picker" value="${config.theme.primaryColor}">
-                    <input type="text" id="primary-color-input" value="${config.theme.primaryColor}" size="7">
-                </label><br>
-                <label>Secondary Color: 
-                    <input type="color" id="secondary-color-picker" value="${config.theme.secondaryColor}">
-                    <input type="text" id="secondary-color-input" value="${config.theme.secondaryColor}" size="7">
-                </label><br>
+                <label>Primary Color: <input type="color" id="primary-color-input" value="${config.theme.primaryColor}"></label><br>
+                <label>Secondary Color: <input type="color" id="secondary-color-input" value="${config.theme.secondaryColor}"></label><br>
                 <button id="save-theme">Save Theme</button>
 
                 <h2>Social Links</h2>
                 <div id="social-links-admin"></div>
                 <button id="save-social-links">Save Social Links</button>
+
+                <h2>QR Code</h2>
+                <div id="qrcode"></div>
             </div>
         `;
 
-        const socialLinksAdmin = document.getElementById('social-links-admin');
-        config.socialLinks.forEach(link => {
-            const capitalizedName = link.name.charAt(0).toUpperCase() + link.name.slice(1);
-            socialLinksAdmin.innerHTML += `
-                <div>
-                    <label>${capitalizedName}: <input type="text" value="${link.url}"></label>
-                </div>
-            `;
+        // QR Code Generation
+        new QRCode(document.getElementById("qrcode"), {
+            text: window.location.origin,
+            width: 128,
+            height: 128,
+            colorDark : config.theme.primaryColor,
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
         });
 
-        // Sync color pickers and text inputs
-        const primaryColorPicker = document.getElementById('primary-color-picker');
-        const primaryColorInput = document.getElementById('primary-color-input');
-        primaryColorPicker.addEventListener('input', (e) => primaryColorInput.value = e.target.value);
-        primaryColorInput.addEventListener('input', (e) => primaryColorPicker.value = e.target.value);
+        const socialLinksAdmin = document.getElementById('social-links-admin');
+        config.socialLinks.forEach(link => {
+            const linkDiv = document.createElement('div');
+            linkDiv.classList.add('social-link');
+            linkDiv.innerHTML = `
+                <input type="text" class="social-link-url" value="${link.url}" placeholder="https://...">
+                <select class="social-link-platform">
+                    <option value="facebook" ${link.platform === 'facebook' ? 'selected' : ''}>Facebook</option>
+                    <option value="twitter" ${link.platform === 'twitter' ? 'selected' : ''}>Twitter</option>
+                    <option value="instagram" ${link.platform === 'instagram' ? 'selected' : ''}>Instagram</option>
+                    <option value="linkedin" ${link.platform === 'linkedin' ? 'selected' : ''}>LinkedIn</option>
+                </select>
+                <button class="delete-social-link">Delete</button>
+            `;
+            socialLinksAdmin.appendChild(linkDiv);
+        });
 
-        const secondaryColorPicker = document.getElementById('secondary-color-picker');
-        const secondaryColorInput = document.getElementById('secondary-color-input');
-        secondaryColorPicker.addEventListener('input', (e) => secondaryColorInput.value = e.target.value);
-        secondaryColorInput.addEventListener('input', (e) => secondaryColorPicker.value = e.target.value);
-
-        document.getElementById('save-content').addEventListener('click', (e) => {
+        document.getElementById('save-content').addEventListener('click', () => {
             const newConfig = { ...config };
             newConfig.companyName = document.getElementById('company-name-input').value;
             newConfig.description = document.getElementById('description-input').value;
-            saveConfig(newConfig, e.target);
-        });
 
-        document.getElementById('logo-upload').addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
+            const logoFile = document.getElementById('logo-upload').files[0];
+            if (logoFile) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const content = e.target.result.split(',')[1];
                     fetch('/api/upload', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename: file.name, content })
+                        body: JSON.stringify({ filename: logoFile.name, content })
                     })
                     .then(response => response.json())
                     .then(data => {
-                        const newConfig = { ...config };
                         newConfig.logo = data.url;
-                        document.getElementById('logo-preview').src = data.url;
                         saveConfig(newConfig);
                     });
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(logoFile);
+            } else {
+                saveConfig(newConfig);
             }
         });
 
-        document.getElementById('save-theme').addEventListener('click', (e) => {
+        document.getElementById('save-theme').addEventListener('click', () => {
             const newConfig = { ...config };
             newConfig.theme.primaryColor = document.getElementById('primary-color-input').value;
             newConfig.theme.secondaryColor = document.getElementById('secondary-color-input').value;
-            saveConfig(newConfig, e.target);
+            saveConfig(newConfig);
         });
 
-        document.getElementById('save-social-links').addEventListener('click', (e) => {
+        document.getElementById('save-social-links').addEventListener('click', () => {
             const newConfig = { ...config };
-            const socialLinksAdmin = document.getElementById('social-links-admin');
-            const inputs = socialLinksAdmin.querySelectorAll('input');
-            newConfig.socialLinks.forEach((link, index) => {
-                link.url = inputs[index].value;
+            newConfig.socialLinks = Array.from(document.querySelectorAll('.social-link')).map(linkDiv => {
+                return {
+                    url: linkDiv.querySelector('.social-link-url').value,
+                    platform: linkDiv.querySelector('.social-link-platform').value
+                };
             });
-            saveConfig(newConfig, e.target);
+            saveConfig(newConfig);
         });
     }
 
@@ -316,15 +325,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (event.target.classList.contains('save-edit-campaign')) {
                 const campaignAdmin = event.target.closest('.campaign-admin');
-                const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value).toISOString();
-                const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value).toISOString();
+                const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
+                const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
+                newEndDate.setHours(23, 59, 59, 999); // Set to end of day
 
                 // Overlap check
                 const overlaps = newConfig.campaigns.some(c => {
                     if (c.id === campaignId) return false;
                     const existingStart = new Date(c.startDate);
                     const existingEnd = new Date(c.endDate);
-                    return (new Date(newStartDate) < existingEnd && new Date(newEndDate) > existingStart);
+                    return (newStartDate < existingEnd && newEndDate > existingStart);
                 });
 
                 if (overlaps) {
@@ -335,8 +345,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 campaign.name = campaignAdmin.querySelector('.campaign-name-edit').value;
                 campaign.description = campaignAdmin.querySelector('.campaign-description-edit').value;
                 campaign.message = campaignAdmin.querySelector('.campaign-message-edit').value;
-                campaign.startDate = newStartDate;
-                campaign.endDate = newEndDate;
+                campaign.startDate = newStartDate.toISOString();
+                campaign.endDate = newEndDate.toISOString();
                 
                 const linkOrder = Array.from(campaignAdmin.querySelectorAll('.campaign-link-row')).map(row => row.dataset.id);
                 campaign.links = linkOrder.filter(id => campaignAdmin.querySelector(`.campaign-link-row[data-id="${id}"] input[type="checkbox"]`).checked);
@@ -361,11 +371,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `).join('');
                 campaignAdmin.innerHTML = `
-                    <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
-                    <label>Admin Description: <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
-                    <label>Public Message: <textarea class="campaign-message-edit" placeholder="Displayed on the page during the campaign...">${campaign.message || ''}</textarea></label>
-                    <label>Start Date/Time: <input type="datetime-local" class="campaign-start-edit" value="${campaign.startDate.slice(0, 16)}"></label>
-                    <label>End Date/Time: <input type="datetime-local" class="campaign-end-edit" value="${campaign.endDate.slice(0, 16)}"></label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;">
+                        <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
+                        <label>Admin Description: <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
+                        <label>Banner Message: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40"></label>
+                        <div>
+                            <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
+                            <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
+                        </div>
+                    </div>
                     <h4>Links</h4>
                     <div class="campaign-links-edit">${campaignLinksHtml}</div>
                     <button class="save-edit-campaign">Save</button>
@@ -487,6 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <canvas id="visits-chart"></canvas>
                 <h3>Clicks per Link</h3>
                 <canvas id="clicks-chart"></canvas>
+                <h3>Visitors by Hour</h3>
+                <canvas id="hourly-chart"></canvas>
             </div>
         `;
 
@@ -497,8 +513,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Clear previous charts
             const visitsChartCanvas = document.getElementById('visits-chart');
             const clicksChartCanvas = document.getElementById('clicks-chart');
+            const hourlyChartCanvas = document.getElementById('hourly-chart');
             if (visitsChartCanvas.chart) visitsChartCanvas.chart.destroy();
             if (clicksChartCanvas.chart) clicksChartCanvas.chart.destroy();
+            if (hourlyChartCanvas.chart) hourlyChartCanvas.chart.destroy();
 
             const totalVisits = analyticsData.visits.length;
             const totalClicks = analyticsData.clicks.length;
@@ -568,25 +586,36 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (selectedDateFilter === 'yesterday') {
                 startDate.setDate(now.getDate() - 1);
                 startDate.setHours(0, 0, 0, 0);
+                now.setDate(now.getDate() - 1);
+                now.setHours(23, 59, 59, 999);
+            } else if (selectedDateFilter === '1') { // Today
+                startDate.setHours(0, 0, 0, 0);
             } else {
                 startDate.setDate(now.getDate() - parseInt(selectedDateFilter));
             }
             
-            filteredAnalytics.visits = filteredAnalytics.visits.filter(v => new Date(v.timestamp) >= startDate);
-            filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => new Date(c.timestamp) >= startDate);
+            filteredAnalytics.visits = filteredAnalytics.visits.filter(v => {
+                const visitDate = new Date(v.timestamp);
+                return visitDate >= startDate && visitDate <= now;
+            });
+            filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => {
+                const clickDate = new Date(c.timestamp);
+                return clickDate >= startDate && clickDate <= now;
+            });
 
             // Populate campaign filter based on date filter
+            const currentCampaignSelection = campaignFilter.value;
             campaignFilter.innerHTML = '<option value="all">All Campaigns</option>';
             config.campaigns.forEach(c => {
                 if (new Date(c.endDate) >= startDate) {
                     campaignFilter.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                 }
             });
-            campaignFilter.value = selectedCampaignFilter;
+            campaignFilter.value = currentCampaignSelection;
 
             // Filter by campaign
-            if (selectedCampaignFilter !== 'all') {
-                const campaign = config.campaigns.find(c => c.id === selectedCampaignFilter);
+            if (campaignFilter.value !== 'all') {
+                const campaign = config.campaigns.find(c => c.id === campaignFilter.value);
                 if (campaign) {
                     const campaignStart = new Date(campaign.startDate);
                     const campaignEnd = new Date(campaign.endDate);
