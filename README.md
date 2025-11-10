@@ -22,33 +22,33 @@ This application is designed to be hosted on a platform that supports Node.js an
 
 We recommend a service like [Render](https://render.com/) which offers a free tier for Node.js applications and persistent disks.
 
-### Deploying on Vercel with Upstash Redis
+### Deploying on Vercel with Vercel KV (powered by Upstash)
 
-This project is configured to deploy seamlessly on Vercel using Upstash Redis for persistent, serverless data storage.
+This project is configured to deploy seamlessly on Vercel using its native KV storage, which is powered by Upstash.
 
 #### Step-by-Step Deployment Guide
 
-1.  **Create a Free Upstash Redis Database:**
-    *   Go to [upstash.com](https://upstash.com/) and sign up for a free account.
-    *   From your Upstash dashboard, click **"Create Database"**.
-    *   **Database Name:** `upstash-kv-linktracking`
-    *   Select a primary region and click **"Create"**.
-    *   Once the database is created, click the **"Connect"** button. You will see the connection details. Keep this page open.
+1.  **Push Your Code to GitHub:**
+    *   Ensure all your project code is up-to-date in a GitHub repository.
 
-2.  **Deploy to Vercel:**
-    *   Push your project code to a GitHub repository.
-    *   Log in to Vercel and import the project from your GitHub repository.
-    *   Vercel will automatically detect the project settings.
+2.  **Import Project into Vercel:**
+    *   Log in to your Vercel account.
+    *   From your dashboard, click **"Add New..."** -> **"Project"**.
+    *   Import the GitHub repository containing your project.
+    *   Vercel will automatically detect the correct settings. Click **"Deploy"** for the initial deployment.
 
-3.  **Add Environment Variables to Vercel:**
-    *   In your Vercel project's dashboard, go to the **"Settings"** tab and then **"Environment Variables"**.
-    *   You will need to add two environment variables from your Upstash database's "Connect" page:
-        *   `UPSTASH_REDIS_REST_URL`: Copy the `UPSTASH_REDIS_REST_URL` value from Upstash.
-        *   `UPSTASH_REDIS_REST_TOKEN`: Copy the `UPSTASH_REDIS_REST_TOKEN` value from Upstash.
-    *   Add both variables to your Vercel project.
+3.  **Create and Connect Vercel KV Store:**
+    *   After the first deployment is complete, navigate to your project's dashboard on Vercel.
+    *   Click on the **"Storage"** tab.
+    *   Locate **"KV (New)"** from the list of options and click **"Connect Store"**.
+    *   In the dialog that appears, ensure your project is selected and click **"Connect"**.
 
-4.  **Deploy:**
-    *   Trigger a new deployment in Vercel to apply the environment variables.
-    *   Go to the **"Deployments"** tab, find the latest deployment, and select **"Redeploy"** from the menu.
+4.  **Automatic Environment Variables:**
+    *   Vercel will automatically create and link the necessary environment variables (`KV_REST_API_URL` and `KV_REST_API_TOKEN`) to your project. The application is already configured to use these variables.
 
-Your application is now live and will use your Upstash Redis database to store all its data.
+5.  **Redeploy to Apply Changes:**
+    *   To ensure your application can access the new KV store, you must trigger a new deployment.
+    *   Go to the **"Deployments"** tab for your project.
+    *   Find the latest deployment, click the three-dots menu (...) on the right, and select **"Redeploy"**.
+
+Your application is now live and will use Vercel KV to store all its data.
