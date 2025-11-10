@@ -39,14 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/config')
             .then(response => response.json())
             .then(config => {
-                // Apply theme to admin buttons
-                const buttons = document.querySelectorAll('button');
-                buttons.forEach(button => {
-                    button.style.backgroundColor = config.theme.primaryColor;
-                    button.addEventListener('mouseover', () => button.style.backgroundColor = config.theme.secondaryColor);
-                    button.addEventListener('mouseout', () => button.style.backgroundColor = config.theme.primaryColor);
-                });
-
                 adminContentDiv.innerHTML = ''; // Clear previous content
                 switch (tab) {
                     case 'general':
@@ -70,24 +62,72 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="general-tab" class="tab-content active">
                 <h2>Landing Page Content</h2>
                 <label>Unit Name: <input type="text" id="company-name-input" value="${config.companyName}"></label><br>
+                <label>Introduction Text: <textarea id="description-input">${config.description}</textarea></label><br>
                 <label>Logo: <input type="file" id="logo-upload"></label><br>
                 <img id="logo-preview" src="${config.logo}" style="max-width: 100px;"><br>
-                <label>Introduction Text: <textarea id="description-input">${config.description}</textarea></label><br>
-                <button id="save-content">Save Content</button>
+                <div class="button-container"><button id="save-content">Save Content</button></div>
                 
                 <h2>Theme</h2>
-                <label>Primary Color: <input type="color" id="primary-color-input" value="${config.theme.primaryColor}"></label><br>
-                <label>Secondary Color: <input type="color" id="secondary-color-input" value="${config.theme.secondaryColor}"></label><br>
-                <button id="save-theme">Save Theme</button>
+                <label>Background Color: 
+                    <input type="color" id="bg-color-picker" value="${config.theme.backgroundColor || '#f0f2f5'}">
+                    <input type="text" id="bg-color-input" value="${config.theme.backgroundColor || '#f0f2f5'}" size="7">
+                </label><br>
+                <label>Container Color: 
+                    <input type="color" id="container-color-picker" value="${config.theme.containerColor || '#ffffff'}">
+                    <input type="text" id="container-color-input" value="${config.theme.containerColor || '#ffffff'}" size="7">
+                </label><br>
+                <label>Primary Color (Header): 
+                    <input type="color" id="primary-color-picker" value="${config.theme.primaryColor}">
+                    <input type="text" id="primary-color-input" value="${config.theme.primaryColor}" size="7">
+                </label>
+                <label>Text Color: 
+                    <input type="color" id="primary-text-color-picker" value="${config.theme.primaryTextColor || '#000000'}">
+                    <input type="text" id="primary-text-color-input" value="${config.theme.primaryTextColor || '#000000'}" size="7">
+                </label><br>
+                <label>Secondary Color (Links): 
+                    <input type="color" id="secondary-color-picker" value="${config.theme.secondaryColor}">
+                    <input type="text" id="secondary-color-input" value="${config.theme.secondaryColor}" size="7">
+                </label>
+                <label>Text Color: 
+                    <input type="color" id="secondary-text-color-picker" value="${config.theme.secondaryTextColor || '#000000'}">
+                    <input type="text" id="secondary-text-color-input" value="${config.theme.secondaryTextColor || '#000000'}" size="7">
+                </label><br>
+                <div class="button-container"><button id="save-theme">Save Theme</button></div>
 
                 <h2>Social Links</h2>
                 <div id="social-links-admin"></div>
-                <button id="save-social-links">Save Social Links</button>
+                <button id="add-social-link">Add Social Link</button>
+                <div class="button-container"><button id="save-social-links">Save Social Links</button></div>
 
                 <h2>QR Code</h2>
                 <div id="qrcode"></div>
             </div>
         `;
+
+        // Theme color pickers synchronization
+        const syncColorInputs = (pickerId, inputId) => {
+            const picker = document.getElementById(pickerId);
+            const input = document.getElementById(inputId);
+            picker.addEventListener('input', (e) => input.value = e.target.value);
+            input.addEventListener('input', (e) => picker.value = e.target.value);
+        };
+        syncColorInputs('bg-color-picker', 'bg-color-input');
+        syncColorInputs('container-color-picker', 'container-color-input');
+        syncColorInputs('primary-color-picker', 'primary-color-input');
+        syncColorInputs('primary-text-color-picker', 'primary-text-color-input');
+        syncColorInputs('secondary-color-picker', 'secondary-color-input');
+        syncColorInputs('secondary-text-color-picker', 'secondary-text-color-input');
+
+        document.getElementById('save-theme').addEventListener('click', (e) => {
+            const newConfig = { ...config };
+            newConfig.theme.backgroundColor = document.getElementById('bg-color-input').value;
+            newConfig.theme.containerColor = document.getElementById('container-color-input').value;
+            newConfig.theme.primaryColor = document.getElementById('primary-color-input').value;
+            newConfig.theme.primaryTextColor = document.getElementById('primary-text-color-input').value;
+            newConfig.theme.secondaryColor = document.getElementById('secondary-color-input').value;
+            newConfig.theme.secondaryTextColor = document.getElementById('secondary-text-color-input').value;
+            saveConfig(newConfig, e.target);
+        });
 
         // QR Code Generation
         new QRCode(document.getElementById("qrcode"), {
@@ -100,65 +140,46 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const socialLinksAdmin = document.getElementById('social-links-admin');
-        config.socialLinks.forEach(link => {
-            const linkDiv = document.createElement('div');
-            linkDiv.classList.add('social-link');
-            linkDiv.innerHTML = `
-                <input type="text" class="social-link-url" value="${link.url}" placeholder="https://...">
-                <select class="social-link-platform">
-                    <option value="facebook" ${link.platform === 'facebook' ? 'selected' : ''}>Facebook</option>
-                    <option value="twitter" ${link.platform === 'twitter' ? 'selected' : ''}>Twitter</option>
-                    <option value="instagram" ${link.platform === 'instagram' ? 'selected' : ''}>Instagram</option>
-                    <option value="linkedin" ${link.platform === 'linkedin' ? 'selected' : ''}>LinkedIn</option>
+        config.socialLinks.forEach((link, index) => {
+            const linkEl = document.createElement('div');
+            linkEl.innerHTML = `
+                <select data-index="${index}">
+                    <option value="facebook" ${link.name === 'facebook' ? 'selected' : ''}>Facebook</option>
+                    <option value="instagram" ${link.name === 'instagram' ? 'selected' : ''}>Instagram</option>
+                    <option value="youtube" ${link.name === 'youtube' ? 'selected' : ''}>Youtube</option>
+                    <option value="x" ${link.name === 'x' ? 'selected' : ''}>X</option>
+                    <option value="tiktok" ${link.name === 'tiktok' ? 'selected' : ''}>Tiktok</option>
                 </select>
-                <button class="delete-social-link">Delete</button>
+                <input type="text" value="${link.url}" data-index="${index}">
+                <button class="delete-social" data-index="${index}">Delete</button>
             `;
-            socialLinksAdmin.appendChild(linkDiv);
+            socialLinksAdmin.appendChild(linkEl);
         });
 
-        document.getElementById('save-content').addEventListener('click', () => {
+        document.getElementById('add-social-link').addEventListener('click', () => {
             const newConfig = { ...config };
-            newConfig.companyName = document.getElementById('company-name-input').value;
-            newConfig.description = document.getElementById('description-input').value;
+            newConfig.socialLinks.push({ name: 'facebook', url: '' });
+            saveConfig(newConfig).then(() => renderGeneralTab(newConfig));
+        });
 
-            const logoFile = document.getElementById('logo-upload').files[0];
-            if (logoFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const content = e.target.result.split(',')[1];
-                    fetch('/api/upload', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename: logoFile.name, content })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        newConfig.logo = data.url;
-                        saveConfig(newConfig);
-                    });
-                };
-                reader.readAsDataURL(logoFile);
-            } else {
-                saveConfig(newConfig);
+        socialLinksAdmin.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-social')) {
+                const index = parseInt(e.target.dataset.index, 10);
+                const newConfig = { ...config };
+                newConfig.socialLinks.splice(index, 1);
+                saveConfig(newConfig).then(() => renderGeneralTab(newConfig));
             }
         });
 
-        document.getElementById('save-theme').addEventListener('click', () => {
+        document.getElementById('save-social-links').addEventListener('click', (e) => {
             const newConfig = { ...config };
-            newConfig.theme.primaryColor = document.getElementById('primary-color-input').value;
-            newConfig.theme.secondaryColor = document.getElementById('secondary-color-input').value;
-            saveConfig(newConfig);
-        });
-
-        document.getElementById('save-social-links').addEventListener('click', () => {
-            const newConfig = { ...config };
-            newConfig.socialLinks = Array.from(document.querySelectorAll('.social-link')).map(linkDiv => {
-                return {
-                    url: linkDiv.querySelector('.social-link-url').value,
-                    platform: linkDiv.querySelector('.social-link-platform').value
-                };
-            });
-            saveConfig(newConfig);
+            const urlInputs = socialLinksAdmin.querySelectorAll('input[type="text"]');
+            const nameSelects = socialLinksAdmin.querySelectorAll('select');
+            newConfig.socialLinks = Array.from(urlInputs).map((input, index) => ({
+                name: nameSelects[index].value,
+                url: input.value
+            }));
+            saveConfig(newConfig, e.target);
         });
     }
 
@@ -304,13 +325,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('add-campaign').addEventListener('click', () => {
             const newConfig = { ...config };
+            const startDate = new Date();
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date();
+            endDate.setHours(23, 59, 59, 999);
+
             newConfig.campaigns.push({
                 id: Date.now().toString(),
                 name: 'New Campaign',
                 description: '',
                 message: '',
-                startDate: new Date().toISOString(),
-                endDate: new Date().toISOString(),
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
                 links: config.links.map(l => l.id) // Default to all links
             });
             saveConfig(newConfig).then(() => loadAdminContent('campaigns'));

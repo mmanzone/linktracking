@@ -12,11 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json())
         .then(config => {
             // Apply theme
+            document.body.style.backgroundColor = config.theme.backgroundColor || '#f0f2f5';
+            const container = document.querySelector('.container');
+            container.style.backgroundColor = config.theme.containerColor || '#ffffff';
+            
             const header = document.querySelector('header');
             header.style.backgroundColor = config.theme.primaryColor;
-            const textColor = getContrastYIQ(config.theme.primaryColor);
-            header.style.color = textColor;
+            header.style.color = config.theme.primaryTextColor || getContrastYIQ(config.theme.primaryColor);
+            
             document.documentElement.style.setProperty('--secondary-color', config.theme.secondaryColor);
+            document.documentElement.style.setProperty('--secondary-text-color', config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor));
 
             document.getElementById('company-name').textContent = config.companyName;
             document.getElementById('logo').src = config.logo;
@@ -48,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bannerContainer.innerHTML = `<div class="campaign-message">${activeCampaign.message}</div>`;
                 const campaignBanner = bannerContainer.querySelector('.campaign-message');
                 campaignBanner.style.backgroundColor = config.theme.secondaryColor;
-                campaignBanner.style.color = getContrastYIQ(config.theme.secondaryColor);
+                campaignBanner.style.color = config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor);
                 
                 const campaignLinkIds = new Set(activeCampaign.links);
                 linksToShow = config.links.filter(l => campaignLinkIds.has(l.id));
@@ -61,8 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     a.classList.add('link');
                     a.dataset.id = link.id;
                     a.innerHTML = `<img src="${link.icon}" alt="${link.text}"><span>${link.text}</span>`;
-                    const linkTextColor = getContrastYIQ(config.theme.secondaryColor);
-                    a.style.color = linkTextColor;
+                    a.style.color = 'var(--secondary-text-color)';
                     linksContainer.appendChild(a);
                 }
             });

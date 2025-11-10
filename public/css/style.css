@@ -175,6 +175,13 @@ button {
     border: none;
     cursor: pointer;
     font-weight: 600;
+    width: auto;
+    padding: 8px 16px;
+    margin: 5px 0 15px 0;
+}
+
+.button-container {
+    text-align: right;
 }
 
 button:hover {
