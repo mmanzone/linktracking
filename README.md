@@ -22,23 +22,33 @@ This application is designed to be hosted on a platform that supports Node.js an
 
 We recommend a service like [Render](https://render.com/) which offers a free tier for Node.js applications and persistent disks.
 
-### Deploying on Render
+### Deploying on Vercel with Upstash Redis
 
-1.  **Fork this repository** to your own GitHub account.
-2.  **Create a new "Web Service"** on Render and connect it to your forked repository.
-3.  **Configure the service:**
-    -   **Environment:** `Node`
-    -   **Build Command:** `npm install`
-    -   **Start Command:** `node server.js`
-4.  **Add a Persistent Disk:**
-    -   Go to the "Disks" section for your new service.
-    -   Click "New Disk".
-    -   **Name:** `data-disk` (or any name)
-    -   **Mount Path:** `/data`
-    -   **Size:** `1` GB (the smallest size is sufficient)
-5.  **Add an Environment Variable:**
-    -   Go to the "Environment" section for your service.
-    -   Click "New Environment Variable".
-    -   **Key:** `DATA_DIR`
-    -   **Value:** `/data` (this must match the Mount Path of your disk).
-6.  **Deploy:** The application will build and deploy. Your data will be safely stored on the persistent disk.
+This project is configured to deploy seamlessly on Vercel using Upstash Redis for persistent, serverless data storage.
+
+#### Step-by-Step Deployment Guide
+
+1.  **Create a Free Upstash Redis Database:**
+    *   Go to [upstash.com](https://upstash.com/) and sign up for a free account.
+    *   From your Upstash dashboard, click **"Create Database"**.
+    *   **Database Name:** `upstash-kv-linktracking`
+    *   Select a primary region and click **"Create"**.
+    *   Once the database is created, click the **"Connect"** button. You will see the connection details. Keep this page open.
+
+2.  **Deploy to Vercel:**
+    *   Push your project code to a GitHub repository.
+    *   Log in to Vercel and import the project from your GitHub repository.
+    *   Vercel will automatically detect the project settings.
+
+3.  **Add Environment Variables to Vercel:**
+    *   In your Vercel project's dashboard, go to the **"Settings"** tab and then **"Environment Variables"**.
+    *   You will need to add two environment variables from your Upstash database's "Connect" page:
+        *   `UPSTASH_REDIS_REST_URL`: Copy the `UPSTASH_REDIS_REST_URL` value from Upstash.
+        *   `UPSTASH_REDIS_REST_TOKEN`: Copy the `UPSTASH_REDIS_REST_TOKEN` value from Upstash.
+    *   Add both variables to your Vercel project.
+
+4.  **Deploy:**
+    *   Trigger a new deployment in Vercel to apply the environment variables.
+    *   Go to the **"Deployments"** tab, find the latest deployment, and select **"Redeploy"** from the menu.
+
+Your application is now live and will use your Upstash Redis database to store all its data.

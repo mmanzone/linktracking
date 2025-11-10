@@ -1,0 +1,102 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const { Redis } = require('@upstash/redis');
+const path = require('path');
+
+const app = express();
+
+// --- Upstash Redis Client Setup ---
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
+// --- Data Initialization ---
+const initializeRedisData = async () => {
+  const configExists = await redis.exists('config');
+  if (!configExists) {
+    await redis.set('config', {
+      companyName: 'Your Company',
+      logo: 'images/logo.png',
+      description: 'Welcome to our page!',
+      theme: { primaryColor: '#ffffff', secondaryColor: '#000000' },
+      socialLinks: [
+        { name: 'facebook', url: '#' },
+        { name: 'instagram', url: '#' },
+        { name: 'youtube', url: '#' },
+        { name: 'x', url: '#' },
+        { name: 'tiktok', url: '#' },
+      ],
+      links: [],
+      campaigns: [],
+    });
+  }
+
+  const analyticsExists = await redis.exists('analytics');
+  if (!analyticsExists) {
+    await redis.set('analytics', { visits: [], clicks: [] });
+  }
+
+  const usersExists = await redis.exists('users');
+  if (!usersExists) {
+    await redis.set('users', { users: [{ username: 'admin', password: 'password' }] });
+  }
+};
+
+initializeRedisData();
+// --- End Data Initialization ---
+
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, '..')));
+
+app.get('/api/config', async (req, res) => {
+  const config = await redis.get('config');
+  res.json(config);
+});
+
+app.post('/api/visit', async (req, res) => {
+  const analytics = await redis.get('analytics');
+  analytics.visits.push({
+    timestamp: new Date().toISOString(),
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+  await redis.set('analytics', analytics);
+  res.sendStatus(200);
+});
+
+app.post('/api/click', async (req, res) => {
+  const { linkId } = req.body;
+  const analytics = await redis.get('analytics');
+  analytics.clicks.push({
+    timestamp: new Date().toISOString(),
+    linkId,
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+  await redis.set('analytics', analytics);
+  res.sendStatus(200);
+});
+
+app.post('/api/login', async (req, res) => {
+  const { password } = req.body;
+  const users = await redis.get('users');
+  if (users.users.find((u) => u.password === password)) {
+    res.json({ success: true });
+  } else {
+    res.json({ success: false });
+  }
+});
+
+app.post('/api/config', async (req, res) => {
+  const newConfig = req.body;
+  await redis.set('config', newConfig);
+  res.sendStatus(200);
+});
+
+app.get('/api/analytics', async (req, res) => {
+  const analytics = await redis.get('analytics');
+  res.json(analytics);
+});
+
+module.exports = app;
