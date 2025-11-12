@@ -133,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const img = new Image();
-// ...existing code...
         img.crossOrigin = "Anonymous";
         img.onload = function () {
             const canvas = document.querySelector('#qrcode-logo canvas');
@@ -676,6 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <option value="all">All time</option>
                     </select>
                     <select id="campaign-filter"></select>
+                    <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
                 </div>
                 <h3>Visitor Engagement</h3>
                 <canvas id="visits-chart"></canvas>
@@ -683,11 +683,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 <canvas id="clicks-chart"></canvas>
                 <h3>Visitors by Hour</h3>
                 <canvas id="hourly-chart"></canvas>
+                <small>All times are in Australia/Sydney timezone.</small>
             </div>
         `;
 
         const dateFilter = document.getElementById('date-filter');
         const campaignFilter = document.getElementById('campaign-filter');
+        const cumulativeCheckbox = document.getElementById('cumulative-checkbox');
+
+        const getSydneyHour = (utcIsoString) => {
+            const date = new Date(utcIsoString);
+            // A reliable way to get the hour in a specific timezone
+            const sydneyTime = new Date(date.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }));
+            return sydneyTime.getHours();
+        };
 
         const updateAnalyticsCharts = (analyticsData) => {
             // Clear previous charts
@@ -698,35 +707,78 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clicksChartCanvas.chart) clicksChartCanvas.chart.destroy();
             if (hourlyChartCanvas.chart) hourlyChartCanvas.chart.destroy();
 
-            const totalVisits = analyticsData.visits.length;
-            const totalClicks = analyticsData.clicks.length;
-            const abandonedVisits = totalVisits - new Set(analyticsData.clicks.map(c => c.ip)).size;
+            const isCumulative = cumulativeCheckbox.checked;
 
-            visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
-                type: 'bar',
-                data: {
-                    labels: ['Visitor Engagement'],
-                    datasets: [
-                        {
-                            label: `Followed Link (${totalClicks} - ${totalVisits > 0 ? ((totalClicks / totalVisits) * 100).toFixed(1) : 0}%)`,
-                            data: [totalClicks],
-                            backgroundColor: config.theme.secondaryColor
-                        },
-                        {
-                            label: `Abandoned (${abandonedVisits} - ${totalVisits > 0 ? ((abandonedVisits / totalVisits) * 100).toFixed(1) : 0}%)`,
-                            data: [abandonedVisits],
-                            backgroundColor: config.theme.primaryColor
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { beginAtZero: true }
+            if (isCumulative) {
+                const totalVisits = analyticsData.visits.length;
+                const totalClicks = analyticsData.clicks.length;
+                const abandonedVisits = totalVisits - new Set(analyticsData.clicks.map(c => c.ip)).size;
+
+                visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Visitor Engagement'],
+                        datasets: [
+                            {
+                                label: `Followed Link (${totalClicks} - ${totalVisits > 0 ? ((totalClicks / totalVisits) * 100).toFixed(1) : 0}%)`,
+                                data: [totalClicks],
+                                backgroundColor: config.theme.secondaryColor
+                            },
+                            {
+                                label: `Abandoned (${abandonedVisits} - ${totalVisits > 0 ? ((abandonedVisits / totalVisits) * 100).toFixed(1) : 0}%)`,
+                                data: [abandonedVisits],
+                                backgroundColor: config.theme.primaryColor
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        scales: { x: { stacked: true }, y: { stacked: true } }
                     }
-                }
-            });
+                });
+            } else {
+                // Day-by-day breakdown
+                const dataByDay = {};
+                analyticsData.visits.forEach(v => {
+                    const day = new Date(v.timestamp).toLocaleDateString('en-CA'); // YYYY-MM-DD
+                    if (!dataByDay[day]) dataByDay[day] = { visits: 0, clicks: 0 };
+                    dataByDay[day].visits++;
+                });
+                analyticsData.clicks.forEach(c => {
+                    const day = new Date(c.timestamp).toLocaleDateString('en-CA');
+                    if (!dataByDay[day]) dataByDay[day] = { visits: 0, clicks: 0 };
+                    dataByDay[day].clicks++;
+                });
 
+                const sortedDays = Object.keys(dataByDay).sort();
+                const followedData = sortedDays.map(day => dataByDay[day].clicks);
+                const abandonedData = sortedDays.map(day => dataByDay[day].visits - dataByDay[day].clicks);
+
+                visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedDays,
+                        datasets: [
+                            {
+                                label: 'Followed Link',
+                                data: followedData,
+                                backgroundColor: config.theme.secondaryColor
+                            },
+                            {
+                                label: 'Abandoned',
+                                data: abandonedData,
+                                backgroundColor: config.theme.primaryColor
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+                    }
+                });
+            }
+        
             const clicksPerLink = {};
             analyticsData.clicks.forEach(click => {
                 clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
@@ -756,12 +808,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const hourlyVisits = Array(24).fill(0);
             const hourlyClicks = Array(24).fill(0);
             analyticsData.visits.forEach(visit => {
-                const hour = new Date(visit.timestamp).getHours();
-                hourlyVisits[hour]++;
+                hourlyVisits[getSydneyHour(visit.timestamp)]++;
             });
             analyticsData.clicks.forEach(click => {
-                const hour = new Date(click.timestamp).getHours();
-                hourlyClicks[hour]++;
+                hourlyClicks[getSydneyHour(click.timestamp)]++;
             });
 
             hourlyChartCanvas.chart = new Chart(hourlyChartCanvas, {
@@ -770,14 +820,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     labels: Array.from({length: 24}, (_, i) => `${i}:00`),
                     datasets: [
                         {
-                            label: 'Visits',
-                            data: hourlyVisits,
-                            backgroundColor: config.theme.primaryColor
-                        },
-                        {
-                            label: 'Clicks',
+                            label: 'Followed Links',
                             data: hourlyClicks,
                             backgroundColor: config.theme.secondaryColor
+                        },
+                        {
+                            label: 'Abandoned Visits',
+                            data: hourlyVisits.map((v, i) => v - (hourlyClicks[i] || 0)),
+                            backgroundColor: config.theme.primaryColor
                         }
                     ]
                 },
@@ -851,9 +901,11 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/analytics')
             .then(response => response.json())
             .then(analytics => {
-                dateFilter.addEventListener('change', () => filterAnalyticsData(analytics));
-                campaignFilter.addEventListener('change', () => filterAnalyticsData(analytics));
-                filterAnalyticsData(analytics); // Initial load
+                const filterAndRender = () => filterAnalyticsData(analytics);
+                dateFilter.addEventListener('change', filterAndRender);
+                campaignFilter.addEventListener('change', filterAndRender);
+                cumulativeCheckbox.addEventListener('change', filterAndRender);
+                filterAndRender(); // Initial load
             });
     }
 
