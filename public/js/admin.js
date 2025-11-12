@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="general-tab" class="tab-content active">
                 <h2>Landing Page Content</h2>
-                <label>Unit Name: <input type="text" id="company-name-input" value="${config.companyName}"></label><br>
+                <label>Organisation name: <input type="text" id="company-name-input" value="${config.companyName}"></label><br>
                 <label>Introduction Text: <textarea id="description-input">${config.description}</textarea></label><br>
                 <label>Logo: <input type="file" id="logo-upload"></label><br>
                 <img id="logo-preview" src="${config.logo}" style="max-width: 100px;"><br>

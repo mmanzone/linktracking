@@ -263,11 +263,13 @@ header {
 .campaign-message {
     text-align: center;
     padding: 10px;
+    margin-top: 15px;
     margin-bottom: 20px;
     border-radius: 8px;
     background-color: var(--container-color, #ffffff);
     color: var(--container-text-color, #1c1e21);
     border: 1px solid #ddd;
+    font-size: 1.1rem;
 }
 
 .link span {
