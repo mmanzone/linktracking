@@ -270,3 +270,25 @@ header {
     gap: 10px;
     padding: 5px 0;
 }
+
+footer {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+}
+
+@media (max-width: 720px) {
+    /* Responsive styles for smaller screens */
+    .link-admin {
+        grid-template-columns: auto 1fr;
+    }
+
+    .campaign-link-row {
+        grid-template-columns: 1fr;
+    }
+
+    footer {
+        position: static;
+        margin: 10px 0;
+    }
+}

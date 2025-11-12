@@ -123,9 +123,17 @@ document.addEventListener('DOMContentLoaded', () => {
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        const qrLogo = new QRCode(document.getElementById("qrcode-logo"));
+        const qrLogo = new QRCode(document.getElementById("qrcode-logo"), {
+            text: window.location.origin,
+            width: 128,
+            height: 128,
+            colorDark : config.theme.primaryColor,
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
         
         const img = new Image();
+// ...existing code...
         img.crossOrigin = "Anonymous";
         img.onload = function () {
             const canvas = document.querySelector('#qrcode-logo canvas');
@@ -300,12 +308,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (event.target.classList.contains('move-up')) {
                 [newConfig.links[linkIndex], newConfig.links[linkIndex - 1]] = [newConfig.links[linkIndex - 1], newConfig.links[linkIndex]];
-                saveConfig(newConfig).then(() => loadAdminContent('links'));
+                saveConfig(newConfig, event.target).then(() => loadAdminContent('links'));
             }
 
             if (event.target.classList.contains('move-down')) {
                 [newConfig.links[linkIndex], newConfig.links[linkIndex + 1]] = [newConfig.links[linkIndex + 1], newConfig.links[linkIndex]];
-                saveConfig(newConfig).then(() => loadAdminContent('links'));
+                saveConfig(newConfig, event.target).then(() => loadAdminContent('links'));
             }
 
             if (event.target.classList.contains('hide-link')) {
@@ -474,8 +482,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 campaign.startDate = newStartDate.toISOString();
                 campaign.endDate = newEndDate.toISOString();
                 
-                const linkOrder = Array.from(campaignAdmin.querySelectorAll('.campaign-link-row')).map(row => row.dataset.id);
-                campaign.links = linkOrder.filter(id => campaignAdmin.querySelector(`.campaign-link-row[data-id="${id}"] input[type="checkbox"]`).checked);
+                const linkRows = campaignAdmin.querySelectorAll('.campaign-link-row');
+                campaign.links = Array.from(linkRows)
+                    .filter(row => row.querySelector('input[type="checkbox"]').checked)
+                    .map(row => row.dataset.id);
 
                 saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
             }
@@ -581,30 +591,60 @@ document.addEventListener('DOMContentLoaded', () => {
                             clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
                         });
 
-                        const linkLabels = [];
-                        const clickCounts = [];
-                        for (const linkId in clicksPerLink) {
-                            const link = config.links.find(l => l.id === linkId);
-                            if (link) {
-                                linkLabels.push(link.text);
-                                clickCounts.push(clicksPerLink[linkId]);
-                            }
-                        }
+                        const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
+                        const linkLabels = sortedLinks.map(([linkId]) => config.links.find(l => l.id === linkId)?.text || 'Unknown Link');
+                        const clickCounts = sortedLinks.map(([,count]) => count);
 
-                        new Chart(document.getElementById(`campaign-clicks-chart-${campaign.id}`), {
+                        clicksChartCanvas.chart = new Chart(clicksChartCanvas, {
                             type: 'bar',
                             data: {
                                 labels: linkLabels,
                                 datasets: [{
                                     label: 'Clicks per Link',
                                     data: clickCounts,
-                                    backgroundColor: '#36a2eb'
+                                    backgroundColor: config.theme.secondaryColor
                                 }]
                             },
                             options: {
+                                indexAxis: 'y',
                                 responsive: true,
-                                scales: {
-                                    y: { beginAtZero: true }
+                            }
+                        });
+
+                        // Hourly visits chart
+                        const hourlyVisits = Array(24).fill(0);
+                        const hourlyClicks = Array(24).fill(0);
+                        analytics.visits.forEach(visit => {
+                            const hour = new Date(visit.timestamp).getHours();
+                            hourlyVisits[hour]++;
+                        });
+                        analytics.clicks.forEach(click => {
+                            const hour = new Date(click.timestamp).getHours();
+                            hourlyClicks[hour]++;
+                        });
+
+                        hourlyChartCanvas.chart = new Chart(hourlyChartCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                                datasets: [
+                                    {
+                                        label: 'Visits',
+                                        data: hourlyVisits,
+                                        backgroundColor: config.theme.primaryColor
+                                    },
+                                    {
+                                        label: 'Clicks',
+                                        data: hourlyClicks,
+                                        backgroundColor: config.theme.secondaryColor
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: { 
+                                    x: { stacked: true },
+                                    y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
                                 }
                             }
                         });
@@ -687,6 +727,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            const clicksPerLink = {};
+            analyticsData.clicks.forEach(click => {
+                clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
+            });
+
+            const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
+            const linkLabels = sortedLinks.map(([linkId]) => config.links.find(l => l.id === linkId)?.text || 'Unknown Link');
+            const clickCounts = sortedLinks.map(([,count]) => count);
+
             clicksChartCanvas.chart = new Chart(clicksChartCanvas, {
                 type: 'bar',
                 data: {
@@ -703,20 +752,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // Hourly visits chart
+            const hourlyVisits = Array(24).fill(0);
+            const hourlyClicks = Array(24).fill(0);
+            analyticsData.visits.forEach(visit => {
+                const hour = new Date(visit.timestamp).getHours();
+                hourlyVisits[hour]++;
+            });
+            analyticsData.clicks.forEach(click => {
+                const hour = new Date(click.timestamp).getHours();
+                hourlyClicks[hour]++;
+            });
+
             hourlyChartCanvas.chart = new Chart(hourlyChartCanvas, {
                 type: 'bar',
                 data: {
                     labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                    datasets: [{
-                        label: 'Visits per Hour',
-                        data: hourlyVisits,
-                        backgroundColor: config.theme.secondaryColor
-                    }]
+                    datasets: [
+                        {
+                            label: 'Visits',
+                            data: hourlyVisits,
+                            backgroundColor: config.theme.primaryColor
+                        },
+                        {
+                            label: 'Clicks',
+                            data: hourlyClicks,
+                            backgroundColor: config.theme.secondaryColor
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
-                    scales: {
-                        y: { beginAtZero: true }
+                    scales: { 
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
                     }
                 }
             });
