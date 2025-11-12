@@ -49,15 +49,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return now >= startDate && now <= endDate;
             });
 
-            if (activeCampaign && activeCampaign.message) {
-                const bannerContainer = document.getElementById('campaign-banner-container');
-                bannerContainer.innerHTML = `<div class="campaign-message">${activeCampaign.message}</div>`;
-                const campaignBanner = bannerContainer.querySelector('.campaign-message');
-                campaignBanner.style.backgroundColor = config.theme.secondaryColor;
-                campaignBanner.style.color = config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor);
-                
-                const campaignLinkIds = new Set(activeCampaign.links);
-                linksToShow = config.links.filter(l => campaignLinkIds.has(l.id));
+            if (activeCampaign) {
+                if (activeCampaign.message) {
+                    const bannerContainer = document.getElementById('campaign-banner-container');
+                    bannerContainer.innerHTML = `<div class="campaign-message">${activeCampaign.message}</div>`;
+                    const campaignBanner = bannerContainer.querySelector('.campaign-message');
+                    campaignBanner.style.backgroundColor = config.theme.secondaryColor;
+                    campaignBanner.style.color = config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor);
+                }
+                // Use the campaign's link order, filtering out any nulls if a link was deleted
+                linksToShow = activeCampaign.links.map(linkId => config.links.find(l => l.id === linkId)).filter(Boolean);
             }
 
             linksToShow.forEach(link => {

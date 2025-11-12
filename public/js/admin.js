@@ -137,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
         img.onload = function () {
             const canvas = document.querySelector('#qrcode-logo canvas');
             if (canvas) {
-                qrLogo.makeCode(window.location.origin);
                 const ctx = canvas.getContext('2d');
                 const icon_width = 32;
                 const icon_height = 32;
@@ -254,12 +253,16 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="links-tab" class="tab-content active">
                 <h2>Link Management</h2>
+                <p style="font-size: 0.9rem; color: #606770;">
+                    This is the library of links available on this platform. You can choose the order you want them to be displayed and where they will redirect the visitor. You can hide a link from the portal, e.g. for a link that's only seasonal or temporary. You can also create campaigns to show only a specific set of links during a specified period; this way you can make the list of links relevant to the event/campaign you are participating in.
+                </p>
                 <div id="links-list"></div>
                 <button id="add-link">Add New Link</button>
             </div>
         `;
 
         const linksList = document.getElementById('links-list');
+
         config.links.forEach((link, index) => {
             const linkElement = document.createElement('div');
             linkElement.classList.add('link-admin');
@@ -663,27 +666,35 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="analytics-tab" class="tab-content active">
                 <h2>Analytics</h2>
-                <div id="analytics-filters">
+                <p style="font-size: 0.9rem; color: #606770;">
+                    Shows the total number of visitors to the landing page, i.e. people who have opened the landing page using the QR code or not. "Abandoned" shows people who did not go further than the landing page and didn't click on a link. "Followed links" show the actual link or links they followed. One visitor might click on multiple links. 
+                    You can choose to see the results per day using the date filter, or per specific campaign (those will filter by campaign date automatically). If you want the total number of the period, instead of a day-by-day breakdown, click the "Cumulative" checkbox. 
+                    The visitors by hour show the time of the day the visitor opened the page, cumulative over the days in the time period. This highlights the busier engagement period during a campaign for example.
+                </p>
+                <div id="analytics-filters" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
                     <select id="date-filter">
-                        <option value="30">Last 30 days</option>
-                        <option value="7">Last 7 days</option>
                         <option value="1">Today</option>
-                        <option value="yesterday">Yesterday</option>
-                        <option value="90">Last 3 months</option>
-                        <option value="180">Last 6 months</option>
-                        <option value="365">Last 12 months</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="30">Last 30 days</option>
                         <option value="all">All time</option>
                     </select>
-                    <select id="campaign-filter"></select>
-                    <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
+                    <select id="campaign-filter">
+                        <option value="all">All Campaigns</option>
+                    </select>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="cumulative-checkbox">
+                        Cumulative
+                    </label>
                 </div>
-                <h3>Visitor Engagement</h3>
-                <canvas id="visits-chart"></canvas>
-                <h3>Clicks per Link</h3>
-                <canvas id="clicks-chart"></canvas>
-                <h3>Visitors by Hour</h3>
-                <canvas id="hourly-chart"></canvas>
-                <small>All times are in Australia/Sydney timezone.</small>
+                <div>
+                    <canvas id="visits-chart" style="height: 400px;"></canvas>
+                </div>
+                <div>
+                    <canvas id="clicks-chart" style="height: 400px;"></canvas>
+                </div>
+                <div>
+                    <canvas id="hourly-chart" style="height: 400px;"></canvas>
+                </div>
             </div>
         `;
 
