@@ -232,6 +232,10 @@ h2 {
     border-top: 1px solid #eee;
 }
 
+.link-text-edit {
+    font-weight: bold;
+}
+
 .update-feedback {
     color: #28a745;
     font-size: 0.8rem;

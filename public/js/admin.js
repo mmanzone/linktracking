@@ -97,9 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>Social Links</h2>
                 <div id="social-links-admin"></div>
                 <button id="add-social-link">Add Social Link</button>
-                <div class="button-container"><button id="save-social-links">Save Social Links</button></div>
+                                                <div class="button-container"><button id="save-social-links">Save Social Links</button></div>
 
-                <h2>QR Code</h2>
+                <h2>QR Codes</h2>
                 <div style="display: flex; gap: 20px;">
                     <div>
                         <p>Standard</p>
@@ -242,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderLinksTab(config) {
         adminContentDiv.innerHTML = `
             <div id="links-tab" class="tab-content active">
-                <h2>Link Management</h2>
+                <h2>Links Management</h2>
                 <p style="font-size: 0.9rem; color: #606770;">
                     This is the library of links available on this platform. You can choose the order you want them to be displayed and where they will redirect the visitor. You can hide a link from the portal, e.g. for a link that's only seasonal or temporary. You can also create campaigns to show only a specific set of links during a specified period; this way you can make the list of links relevant to the event/campaign you are participating in.
                 </p>
@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     You can see the results of the campaign in this menu, or in the Analytics page, using the Campaign filter.
                 </p>
                 <div id="campaign-filters">
-                    <label>Show campaigns starting in the last: 
+                    <label>Show campaigns started in the last: 
                         <select id="campaign-date-filter">
                             <option value="180">6 months</option>
                             <option value="30">1 month</option>
@@ -693,6 +693,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <select id="campaign-filter"></select>
                     <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
                     <button id="export-analytics">Export Graphs</button>
+                    <button id="refresh-analytics" title="Refresh Data">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </button>
                 </div>
                 <div id="analytics-charts">
                     <h3>Visitor Engagement</h3>
@@ -719,6 +722,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateFilter = document.getElementById('date-filter');
         const campaignFilter = document.getElementById('campaign-filter');
         const cumulativeCheckbox = document.getElementById('cumulative-checkbox');
+
+        const cumulativeCheckbox = document.getElementById('cumulative-checkbox');
+        const refreshButton = document.getElementById('refresh-analytics');
+
+        refreshButton.addEventListener('click', () => {
+            fetch('/api/analytics')
+                .then(response => response.json())
+                .then(analytics => {
+                    filterAnalyticsData(analytics);
+                });
+        });
 
         const getSydneyHour = (utcIsoString) => {
             const date = new Date(utcIsoString);
