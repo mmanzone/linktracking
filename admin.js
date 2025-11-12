@@ -123,23 +123,19 @@ document.addEventListener('DOMContentLoaded', () => {
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        const qrLogo = new QRCode(document.getElementById("qrcode-logo"));
-        
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = function () {
-            const canvas = document.querySelector('#qrcode-logo canvas');
-            if (canvas) {
-                qrLogo.makeCode(window.location.origin);
-                const ctx = canvas.getContext('2d');
-                const icon_width = 32;
-                const icon_height = 32;
-                const x = (canvas.width - icon_width) / 2;
-                const y = (canvas.height - icon_height) / 2;
-                ctx.drawImage(img, x, y, icon_width, icon_height);
-            }
-        };
-        img.src = config.logo;
+        new QRCode(document.getElementById("qrcode-logo"), {
+            text: window.location.origin,
+            width: 128,
+            height: 128,
+            colorDark : config.theme.primaryColor,
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H,
+            logo: config.logo,
+            logoWidth: 32,
+            logoHeight: 32,
+            logoBackgroundColor: '#ffffff',
+            logoBackgroundTransparent: false
+        });
 
 
         // Theme color pickers synchronization
@@ -382,15 +378,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     You can see the results of the campaign in this menu, or in the Analytics page, using the Campaign filter.
                 </p>
                 <div id="campaign-filters">
-                    <label>Date Range:</label>
-                    <select id="campaign-date-filter">
-                        <option value="all">All time</option>
-                        <option value="7">Last 7 days</option>
-                        <option value="30">Last 30 days</option>
-                    </select>
-                    <button id="add-campaign">Add Campaign</button>
+                    <label>Show campaigns starting in the last: 
+                        <select id="campaign-date-filter">
+                            <option value="180">6 months</option>
+                            <option value="30">1 month</option>
+                            <option value="90">3 months</option>
+                            <option value="365">12 months</option>
+                            <option value="all">All time</option>
+                        </select>
+                    </label>
                 </div>
                 <div id="campaigns-list"></div>
+                <button id="add-campaign">Add New Campaign</button>
             </div>
         `;
 
@@ -400,15 +399,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const displayCampaigns = () => {
             campaignsList.innerHTML = '';
             const filterValue = campaignDateFilter.value;
+            const now = new Date();
             let startDate = new Date();
             if (filterValue !== 'all') {
-                startDate.setDate(startDate.getDate() - parseInt(filterValue));
+                startDate.setDate(now.getDate() - parseInt(filterValue));
             } else {
                 startDate = new Date(0);
             }
 
             config.campaigns
-                .filter(c => new Date(c.startDate) >= startDate)
+                .filter(c => {
+                    const campaignStartDate = new Date(c.startDate);
+                    return campaignStartDate >= startDate || campaignStartDate > now;
+                })
                 .forEach(campaign => {
                     const campaignElement = document.createElement('div');
                     campaignElement.classList.add('campaign-admin');
@@ -461,6 +464,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const campaignAdmin = event.target.closest('.campaign-admin');
                 const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
                 const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
+                
+                if (newEndDate < newStartDate) {
+                    alert('Error: End date cannot be before the start date.');
+                    return;
+                }
                 newEndDate.setHours(23, 59, 59, 999); // Set to end of day
 
                 // Overlap check
@@ -497,10 +505,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.target.classList.contains('edit-campaign')) {
                 const campaignAdmin = event.target.closest('.campaign-admin');
                 
-                // Create a sorted list of links for the campaign editor
+                // Correctly sort links: ordered campaign links first, then the rest
                 const campaignLinkIds = new Set(campaign.links);
                 const sortedLinksForCampaign = [
-                    ...config.links.filter(l => campaignLinkIds.has(l.id)),
+                    ...campaign.links.map(id => config.links.find(l => l.id === id)).filter(Boolean),
                     ...config.links.filter(l => !campaignLinkIds.has(l.id))
                 ];
 
@@ -608,6 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             options: {
                                 indexAxis: 'y',
                                 responsive: true,
+                                maintainAspectRatio: false,
                             }
                         });
 
@@ -642,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             },
                             options: {
                                 responsive: true,
+                                maintainAspectRatio: false,
                                 scales: { 
                                     x: { stacked: true },
                                     y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
@@ -671,30 +681,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 </p>
                 <div id="analytics-filters" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
                     <select id="date-filter">
-                        <option value="1">Today</option>
-                        <option value="7">Last 7 days</option>
                         <option value="30">Last 30 days</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="1">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="90">Last 3 months</option>
+                        <option value="180">Last 6 months</option>
+                        <option value="365">Last 12 months</option>
                         <option value="all">All time</option>
                     </select>
-                    <select id="campaign-filter">
-                        <option value="all">All Campaigns</option>
-                    </select>
-                    <label style="display: flex; align-items: center; gap: 5px;">
-                        <input type="checkbox" id="cumulative-checkbox">
-                        Cumulative
-                    </label>
+                    <select id="campaign-filter"></select>
+                    <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
+                    <button id="export-analytics">Export Graphs</button>
                 </div>
-                <div>
-                    <canvas id="visits-chart" style="height: 400px;"></canvas>
+                <div id="analytics-charts">
+                    <h3>Visitor Engagement</h3>
+                    <div style="height: 200px; margin-bottom: 20px;"><canvas id="visits-chart"></canvas></div>
+                    <h3>Clicks per Link</h3>
+                    <div style="height: 400px; margin-bottom: 20px;"><canvas id="clicks-chart"></canvas></div>
+                    <h3>Visitors by Hour</h3>
+                    <div style="height: 300px; margin-bottom: 20px;"><canvas id="hourly-chart"></canvas></div>
                 </div>
-                <div>
-                    <canvas id="clicks-chart" style="height: 400px;"></canvas>
-                </div>
-                <div>
-                    <canvas id="hourly-chart" style="height: 400px;"></canvas>
-                </div>
+                <small>All times are in Australia/Sydney timezone.</small>
             </div>
         `;
+
+        document.getElementById('export-analytics').addEventListener('click', () => {
+            const chartsContainer = document.getElementById('analytics-charts');
+            html2canvas(chartsContainer).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'analytics-export.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
 
         const dateFilter = document.getElementById('date-filter');
         const campaignFilter = document.getElementById('campaign-filter');
@@ -743,6 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     options: {
                         indexAxis: 'y',
                         responsive: true,
+                        maintainAspectRatio: false,
                         scales: { x: { stacked: true }, y: { stacked: true } }
                     }
                 });
@@ -783,6 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
                     }
                 });
@@ -810,6 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 options: {
                     indexAxis: 'y',
                     responsive: true,
+                    maintainAspectRatio: false,
                 }
             });
 
@@ -842,6 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: { 
                         x: { stacked: true },
                         y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
