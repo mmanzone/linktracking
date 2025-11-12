@@ -36,7 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     a.href = link.url;
                     a.target = '_blank'; // Open in new window
                     a.dataset.id = `social-${link.name}`; // Add data-id for tracking
-                    a.innerHTML = `<img src="/images/icons/${link.name}.svg" alt="${link.name}" style="filter: ${primaryTextColor === 'white' ? 'invert(1)' : 'none'};">`;
+                    a.innerHTML = `<img src="/images/icons/${link.name}.svg" alt="${link.name}">`;
+                    a.style.color = primaryTextColor;
                     socialLinksContainer.appendChild(a);
                 }
             });

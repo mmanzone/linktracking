@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <option value="youtube" ${link.name === 'youtube' ? 'selected' : ''}>Youtube</option>
                     <option value="x" ${link.name === 'x' ? 'selected' : ''}>X</option>
                     <option value="tiktok" ${link.name === 'tiktok' ? 'selected' : ''}>Tiktok</option>
+                    <option value="linkedin" ${link.name === 'linkedin' ? 'selected' : ''}>LinkedIn</option>
                 </select>
                 <input type="text" value="${link.url}" data-index="${index}">
                 <button class="delete-social" data-index="${index}">Delete</button>
