@@ -291,12 +291,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         linksList.addEventListener('click', (event) => {
-            const linkId = event.target.closest('.link-admin').dataset.id;
+            const linkAdmin = event.target.closest('.link-admin');
+            if (!linkAdmin) return;
+            const linkId = linkAdmin.dataset.id;
+            
             let newConfig = { ...config };
             const linkIndex = newConfig.links.findIndex(l => l.id === linkId);
 
-            if (event.target.classList.contains('change-icon')) {
-                event.target.previousElementSibling.click();
+            const changeIconButton = event.target.closest('.change-icon');
+            if (changeIconButton) {
+                linkAdmin.querySelector('.link-icon-upload').click();
             }
 
             if (event.target.classList.contains('move-up')) {
@@ -586,86 +590,28 @@ document.addEventListener('DOMContentLoaded', () => {
                             return clickDate >= campaignStartDate && clickDate <= campaignEndDate;
                         });
                         const abandonedCampaignVisits = campaignVisits.length - new Set(campaignClicks.map(c => c.ip)).size;
+                        const followedClicks = campaignClicks.length;
 
                         statsContainer.innerHTML = `
                             <h4>Stats for ${campaign.name}</h4>
                             <p>Total Visits: ${campaignVisits.length}</p>
-                            <p>Total Clicks: ${campaignClicks.length}</p>
+                            <p>Followed Links: ${followedClicks}</p>
                             <p>Abandoned Visits: ${abandonedCampaignVisits}</p>
-                            <canvas id="campaign-clicks-chart-${campaign.id}"></canvas>
+                            <canvas id="campaign-chart-${campaign.id}"></canvas>
                         `;
 
-                        const clicksPerLink = {};
-                        campaignClicks.forEach(click => {
-                            clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
-                        });
-
-                        const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
-                        
-                        const getLinkName = (linkId) => {
-                            if (linkId.startsWith('social-')) {
-                                const name = linkId.replace('social-', '');
-                                return name.charAt(0).toUpperCase() + name.slice(1);
-                            }
-                            return config.links.find(l => l.id === linkId)?.text || 'Unknown Link';
-                        };
-
-                        const linkLabels = sortedLinks.map(([linkId]) => getLinkName(linkId));
-                        const clickCounts = sortedLinks.map(([,count]) => count);
-
-                        clicksChartCanvas.chart = new Chart(clicksChartCanvas, {
-                            type: 'bar',
+                        new Chart(document.getElementById(`campaign-chart-${campaign.id}`), {
+                            type: 'doughnut',
                             data: {
-                                labels: linkLabels,
+                                labels: ['Followed Links', 'Abandoned'],
                                 datasets: [{
-                                    label: 'Clicks per Link',
-                                    data: clickCounts,
-                                    backgroundColor: config.theme.secondaryColor
+                                    data: [followedClicks, abandonedCampaignVisits],
+                                    backgroundColor: [config.theme.secondaryColor, config.theme.primaryColor]
                                 }]
                             },
                             options: {
-                                indexAxis: 'y',
                                 responsive: true,
-                                maintainAspectRatio: false,
-                            }
-                        });
-
-                        // Hourly visits chart
-                        const hourlyVisits = Array(24).fill(0);
-                        const hourlyClicks = Array(24).fill(0);
-                        analytics.visits.forEach(visit => {
-                            const hour = new Date(visit.timestamp).getHours();
-                            hourlyVisits[hour]++;
-                        });
-                        analytics.clicks.forEach(click => {
-                            const hour = new Date(click.timestamp).getHours();
-                            hourlyClicks[hour]++;
-                        });
-
-                        hourlyChartCanvas.chart = new Chart(hourlyChartCanvas, {
-                            type: 'bar',
-                            data: {
-                                labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                                datasets: [
-                                    {
-                                        label: 'Visits',
-                                        data: hourlyVisits,
-                                        backgroundColor: config.theme.primaryColor
-                                    },
-                                    {
-                                        label: 'Clicks',
-                                        data: hourlyClicks,
-                                        backgroundColor: config.theme.secondaryColor
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: { 
-                                    x: { stacked: true },
-                                    y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
-                                }
+                                maintainAspectRatio: false
                             }
                         });
                     });
