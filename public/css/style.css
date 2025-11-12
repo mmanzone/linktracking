@@ -265,7 +265,13 @@ header {
     padding: 10px;
     margin-bottom: 20px;
     border-radius: 8px;
-    color: white;
+    background-color: var(--container-color, #ffffff);
+    color: var(--container-text-color, #1c1e21);
+    border: 1px solid #ddd;
+}
+
+.link span {
+    font-weight: 600;
 }
 
 .campaign-link-row {

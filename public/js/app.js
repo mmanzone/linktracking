@@ -54,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const linksContainer = document.getElementById('links');
-// ...existing code...
             linksContainer.innerHTML = ''; // Clear existing
             let linksToShow = [];
             const now = new Date();
@@ -64,19 +63,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return now >= startDate && now <= endDate;
             });
 
-            if (activeCampaign) {
-                if (activeCampaign.message) {
-                    const bannerContainer = document.getElementById('campaign-banner-container');
-                    bannerContainer.innerHTML = `<div class="campaign-message">${activeCampaign.message}</div>`;
-                    const campaignBanner = bannerContainer.querySelector('.campaign-message');
-                    campaignBanner.style.backgroundColor = config.theme.secondaryColor;
-                    campaignBanner.style.color = config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor);
-                }
-                // For a campaign, we ignore the global 'visible' flag.
-                // A link's presence and order in the campaign's list is what matters.
-                linksToShow = activeCampaign.links
-                    .map(linkId => config.links.find(l => l.id === linkId))
-                    .filter(Boolean); // Filter out any deleted links that might still be in a campaign
+            if (activeCampaign && activeCampaign.message) {
+                const bannerContainer = document.getElementById('campaign-banner-container');
+                bannerContainer.innerHTML = `<div class="campaign-message">${activeCampaign.message}</div>`;
+                const campaignBanner = bannerContainer.querySelector('.campaign-message');
+                campaignBanner.style.backgroundColor = config.theme.containerColor || '#ffffff';
+                campaignBanner.style.color = getContrastYIQ(config.theme.containerColor || '#ffffff');
+                
+                // Use the campaign's link order, filtering out any nulls if a link was deleted
+                linksToShow = activeCampaign.links.map(linkId => config.links.find(l => l.id === linkId)).filter(Boolean);
             } else {
                 // Outside of a campaign, show all links that are marked as visible.
                 linksToShow = config.links.filter(l => l.visible);
