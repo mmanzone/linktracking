@@ -232,12 +232,10 @@ h2 {
     border-top: 1px solid #eee;
 }
 
-.campaign-link-row {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 0;
+.update-feedback {
+    color: #28a745;
+    font-size: 0.8rem;
+    text-align: right;
 }
 
 .container {
@@ -263,4 +261,12 @@ header {
     margin-bottom: 20px;
     border-radius: 8px;
     color: white;
+}
+
+.campaign-link-row {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
 }

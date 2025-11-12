@@ -129,8 +129,65 @@ document.addEventListener('DOMContentLoaded', () => {
             saveConfig(newConfig, e.target);
         });
 
+                <div id="qrcode-logo"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
         // QR Code Generation
-        new QRCode(document.getElementById("qrcode"), {
+        const qrLogo = new QRCode(document.getElementById("qrcode-logo"));
+        
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = function () {
+            const canvas = document.querySelector('#qrcode-logo canvas');
+            if (canvas) {
+                qrLogo.makeCode(window.location.origin);
+                const ctx = canvas.getContext('2d');
+                const icon_width = 32;
+                const icon_height = 32;
+                const x = (canvas.width - icon_width) / 2;
+                const y = (canvas.height - icon_height) / 2;
+                ctx.drawImage(img, x, y, icon_width, icon_height);
+            }
+        };
+        img.src = config.logo;
+
+
+        // Theme color pickers synchronization
+        const syncColorInputs = (pickerId, inputId) => {
+            const picker = document.getElementById(pickerId);
+            const input = document.getElementById(inputId);
+            picker.addEventListener('input', (e) => input.value = e.target.value);
+            input.addEventListener('input', (e) => picker.value = e.target.value);
+        };
+        syncColorInputs('bg-color-picker', 'bg-color-input');
+        syncColorInputs('container-color-picker', 'container-color-input');
+        syncColorInputs('primary-color-picker', 'primary-color-input');
+        syncColorInputs('primary-text-color-picker', 'primary-text-color-input');
+        syncColorInputs('secondary-color-picker', 'secondary-color-input');
+        syncColorInputs('secondary-text-color-picker', 'secondary-text-color-input');
+
+        document.getElementById('save-theme').addEventListener('click', (e) => {
+            const newConfig = { ...config };
+            newConfig.theme.backgroundColor = document.getElementById('bg-color-input').value;
+            newConfig.theme.containerColor = document.getElementById('container-color-input').value;
+            newConfig.theme.primaryColor = document.getElementById('primary-color-input').value;
+            newConfig.theme.primaryTextColor = document.getElementById('primary-text-color-input').value;
+            newConfig.theme.secondaryColor = document.getElementById('secondary-color-input').value;
+            newConfig.theme.secondaryTextColor = document.getElementById('secondary-text-color-input').value;
+            saveConfig(newConfig, e.target);
+        });
+
+                <div id="qrcode-logo"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // QR Code Generation
+        new QRCode(document.getElementById("qrcode-standard"), {
             text: window.location.origin,
             width: 128,
             height: 128,
@@ -139,7 +196,17 @@ document.addEventListener('DOMContentLoaded', () => {
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        const socialLinksAdmin = document.getElementById('social-links-admin');
+        new QRCode(document.getElementById("qrcode-logo"), {
+            text: window.location.origin,
+            width: 128,
+            height: 128,
+            colorDark : config.theme.primaryColor,
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H,
+            logo: config.logo,
+            logoWidth: 32,
+            logoHeight: 32
+        });        const socialLinksAdmin = document.getElementById('social-links-admin');
         config.socialLinks.forEach((link, index) => {
             const linkEl = document.createElement('div');
             linkEl.innerHTML = `
@@ -237,7 +304,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <img src="${link.icon}" style="width: 40px; height: 40px; vertical-align: middle;">
                     <input type="file" class="link-icon-upload" style="display: none;">
-                    <button class="change-icon">Change</button>
+                    <button class="change-icon" title="Change Icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    </button>
                 </div>
                 <input type="text" class="link-text-edit" value="${link.text}" placeholder="Link Name">
                 <input type="text" class="link-url-edit" value="${link.url}" placeholder="https://...">
@@ -317,12 +386,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (event.target.classList.contains('link-text-edit') || event.target.classList.contains('link-url-edit')) {
-                const linkId = event.target.closest('.link-admin').dataset.id;
+                const linkAdmin = event.target.closest('.link-admin');
+                const linkId = linkAdmin.dataset.id;
                 let newConfig = { ...config };
                 const link = newConfig.links.find(l => l.id === linkId);
-                link.text = event.target.closest('.link-admin').querySelector('.link-text-edit').value;
-                link.url = event.target.closest('.link-admin').querySelector('.link-url-edit').value;
-                saveConfig(newConfig);
+                link.text = linkAdmin.querySelector('.link-text-edit').value;
+                link.url = linkAdmin.querySelector('.link-url-edit').value;
+                saveConfig(newConfig).then(() => {
+                    let feedback = linkAdmin.querySelector('.update-feedback');
+                    if (!feedback) {
+                        feedback = document.createElement('div');
+                        feedback.className = 'update-feedback';
+                        linkAdmin.appendChild(feedback);
+                    }
+                    feedback.textContent = 'Updated!';
+                    setTimeout(() => feedback.textContent = '', 2000);
+                });
             }
         });
     }
@@ -331,29 +410,57 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
                 <h2>Campaign Management</h2>
+                <div id="campaign-filters">
+                    <label>Show campaigns starting in the last: 
+                        <select id="campaign-date-filter">
+                            <option value="180">6 months</option>
+                            <option value="90">3 months</option>
+                            <option value="365">12 months</option>
+                            <option value="all">All time</option>
+                        </select>
+                    </label>
+                </div>
                 <div id="campaigns-list"></div>
                 <button id="add-campaign">Add New Campaign</button>
             </div>
         `;
 
         const campaignsList = document.getElementById('campaigns-list');
-        config.campaigns.forEach(campaign => {
-            const campaignElement = document.createElement('div');
-            campaignElement.classList.add('campaign-admin');
-            campaignElement.dataset.id = campaign.id;
-            campaignElement.innerHTML = `
-                <div>
-                    <strong>${campaign.name}</strong><br>
-                    <small>${new Date(campaign.startDate).toLocaleString()} - ${new Date(campaign.endDate).toLocaleString()}</small>
-                </div>
-                <div>
-                    <button class="edit-campaign">Edit</button>
-                    <button class="view-campaign-stats">View Stats</button>
-                    <button class="delete-campaign">Delete</button>
-                </div>
-            `;
-            campaignsList.appendChild(campaignElement);
-        });
+        const campaignDateFilter = document.getElementById('campaign-date-filter');
+
+        const displayCampaigns = () => {
+            campaignsList.innerHTML = '';
+            const filterValue = campaignDateFilter.value;
+            let startDate = new Date();
+            if (filterValue !== 'all') {
+                startDate.setDate(startDate.getDate() - parseInt(filterValue));
+            } else {
+                startDate = new Date(0);
+            }
+
+            config.campaigns
+                .filter(c => new Date(c.startDate) >= startDate)
+                .forEach(campaign => {
+                    const campaignElement = document.createElement('div');
+                    campaignElement.classList.add('campaign-admin');
+                    campaignElement.dataset.id = campaign.id;
+                    campaignElement.innerHTML = `
+                        <div>
+                            <strong>${campaign.name}</strong><br>
+                            <small>${new Date(campaign.startDate).toLocaleDateString()} - ${new Date(campaign.endDate).toLocaleDateString()}</small>
+                        </div>
+                        <div>
+                            <button class="edit-campaign">Edit</button>
+                            <button class="view-campaign-stats">View Stats</button>
+                            <button class="delete-campaign">Delete</button>
+                        </div>
+                    `;
+                    campaignsList.appendChild(campaignElement);
+                });
+        };
+
+        campaignDateFilter.addEventListener('change', displayCampaigns);
+        displayCampaigns(); // Initial display
 
         document.getElementById('add-campaign').addEventListener('click', () => {
             const newConfig = { ...config };
@@ -418,16 +525,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (event.target.classList.contains('edit-campaign')) {
                 const campaignAdmin = event.target.closest('.campaign-admin');
-                const campaignLinksHtml = config.links.map((link, index) => `
+                
+                // Create a sorted list of links for the campaign editor
+                const campaignLinkIds = new Set(campaign.links);
+                const sortedLinksForCampaign = [
+                    ...config.links.filter(l => campaignLinkIds.has(l.id)),
+                    ...config.links.filter(l => !campaignLinkIds.has(l.id))
+                ];
+
+                const campaignLinksHtml = sortedLinksForCampaign.map(link => `
                     <div class="campaign-link-row" data-id="${link.id}">
                         <div class="link-order">
-                            <button class="move-link-up" ${index === 0 ? 'disabled' : ''}>▲</button>
-                            <button class="move-link-down" ${index === config.links.length - 1 ? 'disabled' : ''}>▼</button>
+                            <button class="move-link-up">▲</button>
+                            <button class="move-link-down">▼</button>
                         </div>
                         <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
-                        <label>${link.text}</label>
+                        <div class="link" style="background-color: ${config.theme.secondaryColor}; color: ${config.theme.secondaryTextColor || 'black'};">
+                            <img src="${link.icon}" alt="${link.text}">
+                            <span>${link.text}</span>
+                        </div>
                     </div>
                 `).join('');
+
                 campaignAdmin.innerHTML = `
                     <div style="width: 100%;">
                         <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
@@ -590,30 +709,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         {
                             label: `Followed Link (${totalClicks} - ${totalVisits > 0 ? ((totalClicks / totalVisits) * 100).toFixed(1) : 0}%)`,
                             data: [totalClicks],
-                            backgroundColor: '#36a2eb'
+                            backgroundColor: config.theme.secondaryColor
                         },
                         {
                             label: `Abandoned (${abandonedVisits} - ${totalVisits > 0 ? ((abandonedVisits / totalVisits) * 100).toFixed(1) : 0}%)`,
                             data: [abandonedVisits],
-                            backgroundColor: '#ff6384'
+                            backgroundColor: config.theme.primaryColor
                         }
                     ]
                 },
                 options: {
-                    indexAxis: 'y',
                     responsive: true,
-                    scales: { x: { stacked: true }, y: { stacked: true } }
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
                 }
             });
-
-            const clicksPerLink = {};
-            analyticsData.clicks.forEach(click => {
-                clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
-            });
-
-            const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
-            const linkLabels = sortedLinks.map(([linkId]) => config.links.find(l => l.id === linkId)?.text || 'Unknown Link');
-            const clickCounts = sortedLinks.map(([,count]) => count);
 
             clicksChartCanvas.chart = new Chart(clicksChartCanvas, {
                 type: 'bar',
@@ -622,12 +733,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     datasets: [{
                         label: 'Clicks per Link',
                         data: clickCounts,
-                        backgroundColor: '#36a2eb'
+                        backgroundColor: config.theme.secondaryColor
                     }]
                 },
                 options: {
                     indexAxis: 'y',
                     responsive: true,
+                }
+            });
+
+            hourlyChartCanvas.chart = new Chart(hourlyChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    datasets: [{
+                        label: 'Visits per Hour',
+                        data: hourlyVisits,
+                        backgroundColor: config.theme.secondaryColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
                 }
             });
         };

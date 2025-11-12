@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (link && link.visible) {
                     const a = document.createElement('a');
                     a.href = link.url;
+                    a.target = '_blank'; // Open in new tab
                     a.classList.add('link');
                     a.dataset.id = link.id;
                     a.innerHTML = `<img src="${link.icon}" alt="${link.text}"><span>${link.text}</span>`;
