@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const linksContainer = document.getElementById('links');
             linksContainer.innerHTML = ''; // Clear existing
-            let linksToShow = config.links;
+            let linksToShow = [];
             const now = new Date();
             const activeCampaign = config.campaigns.find(c => {
                 const startDate = new Date(c.startDate);
@@ -57,21 +57,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     campaignBanner.style.backgroundColor = config.theme.secondaryColor;
                     campaignBanner.style.color = config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor);
                 }
-                // Use the campaign's link order, filtering out any nulls if a link was deleted
-                linksToShow = activeCampaign.links.map(linkId => config.links.find(l => l.id === linkId)).filter(Boolean);
+                // For a campaign, we ignore the global 'visible' flag.
+                // A link's presence and order in the campaign's list is what matters.
+                linksToShow = activeCampaign.links
+                    .map(linkId => config.links.find(l => l.id === linkId))
+                    .filter(Boolean); // Filter out any deleted links that might still be in a campaign
+            } else {
+                // Outside of a campaign, show all links that are marked as visible.
+                linksToShow = config.links.filter(l => l.visible);
             }
 
             linksToShow.forEach(link => {
-                if (link && link.visible) {
-                    const a = document.createElement('a');
-                    a.href = link.url;
-                    a.target = '_blank'; // Open in new tab
-                    a.classList.add('link');
-                    a.dataset.id = link.id;
-                    a.innerHTML = `<img src="${link.icon}" alt="${link.text}"><span>${link.text}</span>`;
-                    a.style.color = 'var(--secondary-text-color)';
-                    linksContainer.appendChild(a);
-                }
+                // The visibility check has already been done, so we just render.
+                const a = document.createElement('a');
+                a.href = link.url;
+                a.target = '_blank'; // Open in new tab
+                a.classList.add('link');
+                a.dataset.id = link.id;
+                a.innerHTML = `<img src="${link.icon}" alt="${link.text}"><span>${link.text}</span>`;
+                a.style.color = 'var(--secondary-text-color)';
+                linksContainer.appendChild(a);
             });
         });
 
