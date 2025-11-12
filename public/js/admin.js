@@ -722,8 +722,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateFilter = document.getElementById('date-filter');
         const campaignFilter = document.getElementById('campaign-filter');
         const cumulativeCheckbox = document.getElementById('cumulative-checkbox');
-
-        const cumulativeCheckbox = document.getElementById('cumulative-checkbox');
         const refreshButton = document.getElementById('refresh-analytics');
 
         refreshButton.addEventListener('click', () => {
