@@ -600,7 +600,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
 
                         const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
-                        const linkLabels = sortedLinks.map(([linkId]) => config.links.find(l => l.id === linkId)?.text || 'Unknown Link');
+                        
+                        const getLinkName = (linkId) => {
+                            if (linkId.startsWith('social-')) {
+                                const name = linkId.replace('social-', '');
+                                return name.charAt(0).toUpperCase() + name.slice(1);
+                            }
+                            return config.links.find(l => l.id === linkId)?.text || 'Unknown Link';
+                        };
+
+                        const linkLabels = sortedLinks.map(([linkId]) => getLinkName(linkId));
                         const clickCounts = sortedLinks.map(([,count]) => count);
 
                         clicksChartCanvas.chart = new Chart(clicksChartCanvas, {
@@ -828,7 +837,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
-            const linkLabels = sortedLinks.map(([linkId]) => config.links.find(l => l.id === linkId)?.text || 'Unknown Link');
+            
+            const getLinkName = (linkId) => {
+                if (linkId.startsWith('social-')) {
+                    const name = linkId.replace('social-', '');
+                    return name.charAt(0).toUpperCase() + name.slice(1);
+                }
+                return config.links.find(l => l.id === linkId)?.text || 'Unknown Link';
+            };
+
+            const linkLabels = sortedLinks.map(([linkId]) => getLinkName(linkId));
             const clickCounts = sortedLinks.map(([,count]) => count);
 
             clicksChartCanvas.chart = new Chart(clicksChartCanvas, {

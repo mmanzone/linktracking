@@ -34,12 +34,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (link.url && link.url !== '#') {
                     const a = document.createElement('a');
                     a.href = link.url;
+                    a.target = '_blank'; // Open in new window
+                    a.dataset.id = `social-${link.name}`; // Add data-id for tracking
                     a.innerHTML = `<img src="/images/icons/${link.name}.svg" alt="${link.name}" style="filter: ${primaryTextColor === 'white' ? 'invert(1)' : 'none'};">`;
                     socialLinksContainer.appendChild(a);
                 }
             });
 
+            socialLinksContainer.addEventListener('click', (event) => {
+                const link = event.target.closest('a');
+                if (link && link.dataset.id) {
+                    const linkId = link.dataset.id;
+                    fetch('/api/click', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ linkId })
+                    });
+                }
+            });
+
             const linksContainer = document.getElementById('links');
+// ...existing code...
             linksContainer.innerHTML = ''; // Clear existing
             let linksToShow = [];
             const now = new Date();

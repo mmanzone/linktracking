@@ -40,7 +40,7 @@ const initializeRedisData = async () => {
 
   const analyticsExists = await redis.exists('analytics');
   if (!analyticsExists) {
-    await redis.set('analytics', { visits: [], clicks: [] });
+    await redis.set('analytics', { visits: [], clicks: [], socialClicks: [] });
   }
 };
 
@@ -50,11 +50,40 @@ initializeRedisData();
 app.use(bodyParser.json({ limit: '10mb' }));
 
 app.post('/api/upload', async (req, res) => {
-    const { filename, content } = req.body;
-    const blob = await put(filename, Buffer.from(content, 'base64'), {
-        access: 'public',
-    });
+// ...existing code...
     res.json({ url: blob.url });
+});
+
+app.post('/api/social-click', async (req, res) => {
+    const { name } = req.body;
+    const analytics = await redis.get('analytics');
+    if (!analytics.socialClicks) {
+        analytics.socialClicks = [];
+    }
+    analytics.socialClicks.push({
+        timestamp: new Date().toISOString(),
+        name,
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+    });
+    await redis.set('analytics', analytics);
+    res.sendStatus(200);
+});
+
+app.post('/api/social-click', async (req, res) => {
+    const { name } = req.body;
+    const analytics = await redis.get('analytics');
+    if (!analytics.socialClicks) {
+        analytics.socialClicks = [];
+    }
+    analytics.socialClicks.push({
+        timestamp: new Date().toISOString(),
+        name,
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+    });
+    await redis.set('analytics', analytics);
+    res.sendStatus(200);
 });
 
 app.get('/api/config', async (req, res) => {
