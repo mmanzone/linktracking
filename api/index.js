@@ -19,27 +19,28 @@ const initializeRedisData = async () => {
       companyName: 'Your Company',
       logo: '/images/logo.png',
       description: 'Welcome to our page!',
-      theme: { primaryColor: '#ffffff', secondaryColor: '#000000' },
-      socialLinks: [
-        { name: 'facebook', url: '#' },
-        { name: 'instagram', url: '#' },
-        { name: 'youtube', url: '#' },
-        { name: 'x', url: '#' },
-        { name: 'tiktok', url: '#' },
-      ],
+      theme: { 
+        primaryColor: '#007bff', 
+        secondaryColor: '#6c757d',
+        primaryTextColor: '#ffffff',
+        secondaryTextColor: '#ffffff',
+        backgroundColor: '#f0f2f5',
+        containerColor: '#ffffff'
+      },
+      socialLinks: [],
       links: [],
       campaigns: [],
     });
   }
 
-  const analyticsExists = await redis.exists('analytics');
-  if (!analyticsExists) {
-    await redis.set('analytics', { visits: [], clicks: [] });
-  }
-
   const usersExists = await redis.exists('users');
   if (!usersExists) {
     await redis.set('users', { users: [{ username: 'admin', password: 'password' }] });
+  }
+
+  const analyticsExists = await redis.exists('analytics');
+  if (!analyticsExists) {
+    await redis.set('analytics', { visits: [], clicks: [] });
   }
 };
 

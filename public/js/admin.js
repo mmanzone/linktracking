@@ -100,42 +100,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="button-container"><button id="save-social-links">Save Social Links</button></div>
 
                 <h2>QR Code</h2>
-                <div id="qrcode"></div>
-            </div>
-        `;
-
-        // Theme color pickers synchronization
-        const syncColorInputs = (pickerId, inputId) => {
-            const picker = document.getElementById(pickerId);
-            const input = document.getElementById(inputId);
-            picker.addEventListener('input', (e) => input.value = e.target.value);
-            input.addEventListener('input', (e) => picker.value = e.target.value);
-        };
-        syncColorInputs('bg-color-picker', 'bg-color-input');
-        syncColorInputs('container-color-picker', 'container-color-input');
-        syncColorInputs('primary-color-picker', 'primary-color-input');
-        syncColorInputs('primary-text-color-picker', 'primary-text-color-input');
-        syncColorInputs('secondary-color-picker', 'secondary-color-input');
-        syncColorInputs('secondary-text-color-picker', 'secondary-text-color-input');
-
-        document.getElementById('save-theme').addEventListener('click', (e) => {
-            const newConfig = { ...config };
-            newConfig.theme.backgroundColor = document.getElementById('bg-color-input').value;
-            newConfig.theme.containerColor = document.getElementById('container-color-input').value;
-            newConfig.theme.primaryColor = document.getElementById('primary-color-input').value;
-            newConfig.theme.primaryTextColor = document.getElementById('primary-text-color-input').value;
-            newConfig.theme.secondaryColor = document.getElementById('secondary-color-input').value;
-            newConfig.theme.secondaryTextColor = document.getElementById('secondary-text-color-input').value;
-            saveConfig(newConfig, e.target);
-        });
-
-                <div id="qrcode-logo"></div>
+                <div style="display: flex; gap: 20px;">
+                    <div>
+                        <p>Standard</p>
+                        <div id="qrcode-standard"></div>
+                    </div>
+                    <div>
+                        <p>With Logo</p>
+                        <div id="qrcode-logo"></div>
                     </div>
                 </div>
             </div>
         `;
 
         // QR Code Generation
+        new QRCode(document.getElementById("qrcode-standard"), {
+            text: window.location.origin,
+            width: 128,
+            height: 128,
+            colorDark : config.theme.primaryColor,
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
         const qrLogo = new QRCode(document.getElementById("qrcode-logo"));
         
         const img = new Image();
@@ -180,33 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveConfig(newConfig, e.target);
         });
 
-                <div id="qrcode-logo"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // QR Code Generation
-        new QRCode(document.getElementById("qrcode-standard"), {
-            text: window.location.origin,
-            width: 128,
-            height: 128,
-            colorDark : config.theme.primaryColor,
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
-
-        new QRCode(document.getElementById("qrcode-logo"), {
-            text: window.location.origin,
-            width: 128,
-            height: 128,
-            colorDark : config.theme.primaryColor,
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H,
-            logo: config.logo,
-            logoWidth: 32,
-            logoHeight: 32
-        });        const socialLinksAdmin = document.getElementById('social-links-admin');
+        const socialLinksAdmin = document.getElementById('social-links-admin');
         config.socialLinks.forEach((link, index) => {
             const linkEl = document.createElement('div');
             linkEl.innerHTML = `
