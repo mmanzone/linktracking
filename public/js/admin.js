@@ -123,20 +123,14 @@ document.addEventListener('DOMContentLoaded', () => {
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        const qrLogo = new QRCode(document.getElementById("qrcode-logo"), {
-            text: window.location.origin,
-            width: 128,
-            height: 128,
-            colorDark : config.theme.primaryColor,
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
+        const qrLogo = new QRCode(document.getElementById("qrcode-logo"));
         
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.onload = function () {
             const canvas = document.querySelector('#qrcode-logo canvas');
             if (canvas) {
+                qrLogo.makeCode(window.location.origin);
                 const ctx = canvas.getContext('2d');
                 const icon_width = 32;
                 const icon_height = 32;
@@ -381,18 +375,22 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
                 <h2>Campaign Management</h2>
+                <p style="font-size: 0.9rem; color: #606770;">
+                    Campaigns allow you to specify a specific event that you want to track separately, e.g. an event, exhibition or specific outreach. 
+                    For each campaign, set the start and end dates, the name of the campaign/event, a description for you to remember, and a banner message that will be displayed on the landing page during the campaign.
+                    You can then choose which links from the library you want to display and in which order. The selected links and order will only apply during the campaign dates. If you need to add a link for that campaign, you need to create it in the Links admin menu first.
+                    You can see the results of the campaign in this menu, or in the Analytics page, using the Campaign filter.
+                </p>
                 <div id="campaign-filters">
-                    <label>Show campaigns starting in the last: 
-                        <select id="campaign-date-filter">
-                            <option value="180">6 months</option>
-                            <option value="90">3 months</option>
-                            <option value="365">12 months</option>
-                            <option value="all">All time</option>
-                        </select>
-                    </label>
+                    <label>Date Range:</label>
+                    <select id="campaign-date-filter">
+                        <option value="all">All time</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                    </select>
+                    <button id="add-campaign">Add Campaign</button>
                 </div>
                 <div id="campaigns-list"></div>
-                <button id="add-campaign">Add New Campaign</button>
             </div>
         `;
 
@@ -499,10 +497,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.target.classList.contains('edit-campaign')) {
                 const campaignAdmin = event.target.closest('.campaign-admin');
                 
-                // Create a sorted list of links for the campaign editor
+                // Correctly sort links: ordered campaign links first, then the rest
                 const campaignLinkIds = new Set(campaign.links);
                 const sortedLinksForCampaign = [
-                    ...config.links.filter(l => campaignLinkIds.has(l.id)),
+                    ...campaign.links.map(id => config.links.find(l => l.id === id)).filter(Boolean),
                     ...config.links.filter(l => !campaignLinkIds.has(l.id))
                 ];
 
@@ -610,6 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             options: {
                                 indexAxis: 'y',
                                 responsive: true,
+                                maintainAspectRatio: false,
                             }
                         });
 
@@ -644,6 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             },
                             options: {
                                 responsive: true,
+                                maintainAspectRatio: false,
                                 scales: { 
                                     x: { stacked: true },
                                     y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
@@ -673,30 +673,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 </p>
                 <div id="analytics-filters" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
                     <select id="date-filter">
-                        <option value="1">Today</option>
-                        <option value="7">Last 7 days</option>
                         <option value="30">Last 30 days</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="1">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="90">Last 3 months</option>
+                        <option value="180">Last 6 months</option>
+                        <option value="365">Last 12 months</option>
                         <option value="all">All time</option>
                     </select>
-                    <select id="campaign-filter">
-                        <option value="all">All Campaigns</option>
-                    </select>
-                    <label style="display: flex; align-items: center; gap: 5px;">
-                        <input type="checkbox" id="cumulative-checkbox">
-                        Cumulative
-                    </label>
+                    <select id="campaign-filter"></select>
+                    <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
+                    <button id="export-analytics">Export PNG</button>
                 </div>
-                <div>
-                    <canvas id="visits-chart" style="height: 400px;"></canvas>
+                <div id="analytics-charts">
+                    <h3>Visitor Engagement</h3>
+                    <div style="height: 200px; margin-bottom: 20px;"><canvas id="visits-chart"></canvas></div>
+                    <h3>Clicks per Link</h3>
+                    <div style="height: 400px; margin-bottom: 20px;"><canvas id="clicks-chart"></canvas></div>
+                    <h3>Visitors by Hour</h3>
+                    <div style="height: 300px; margin-bottom: 20px;"><canvas id="hourly-chart"></canvas></div>
                 </div>
-                <div>
-                    <canvas id="clicks-chart" style="height: 400px;"></canvas>
-                </div>
-                <div>
-                    <canvas id="hourly-chart" style="height: 400px;"></canvas>
-                </div>
+                <small>All times are in Australia/Sydney timezone.</small>
             </div>
         `;
+
+        document.getElementById('export-analytics').addEventListener('click', () => {
+            const chartsContainer = document.getElementById('analytics-charts');
+            html2canvas(chartsContainer).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'analytics-export.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
 
         const dateFilter = document.getElementById('date-filter');
         const campaignFilter = document.getElementById('campaign-filter');
@@ -745,6 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     options: {
                         indexAxis: 'y',
                         responsive: true,
+                        maintainAspectRatio: false,
                         scales: { x: { stacked: true }, y: { stacked: true } }
                     }
                 });
@@ -785,6 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
                     }
                 });
@@ -812,6 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 options: {
                     indexAxis: 'y',
                     responsive: true,
+                    maintainAspectRatio: false,
                 }
             });
 
@@ -844,6 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: { 
                         x: { stacked: true },
                         y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
