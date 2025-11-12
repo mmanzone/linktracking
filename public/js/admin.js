@@ -181,6 +181,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }));
             saveConfig(newConfig, e.target);
         });
+
+        document.getElementById('save-content').addEventListener('click', (e) => {
+            const newConfig = { ...config };
+            newConfig.companyName = document.getElementById('company-name-input').value;
+            newConfig.description = document.getElementById('description-input').value;
+            newConfig.logo = document.getElementById('logo-preview').src; // Get latest logo
+            saveConfig(newConfig, e.target);
+        });
+
+        document.getElementById('logo-upload').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result.split(',')[1];
+                    const uploadButton = document.getElementById('save-content');
+                    uploadButton.textContent = 'Uploading...';
+                    fetch('/api/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename: file.name, content })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('logo-preview').src = data.url;
+                        uploadButton.textContent = 'Save Content';
+                        alert('Logo uploaded. Click "Save Content" to finalize.');
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
     }
 
     function renderLinksTab(config) {
