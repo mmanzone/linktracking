@@ -123,23 +123,19 @@ document.addEventListener('DOMContentLoaded', () => {
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        const qrLogo = new QRCode(document.getElementById("qrcode-logo"));
-        
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = function () {
-            const canvas = document.querySelector('#qrcode-logo canvas');
-            if (canvas) {
-                qrLogo.makeCode(window.location.origin);
-                const ctx = canvas.getContext('2d');
-                const icon_width = 32;
-                const icon_height = 32;
-                const x = (canvas.width - icon_width) / 2;
-                const y = (canvas.height - icon_height) / 2;
-                ctx.drawImage(img, x, y, icon_width, icon_height);
-            }
-        };
-        img.src = config.logo;
+        new QRCode(document.getElementById("qrcode-logo"), {
+            text: window.location.origin,
+            width: 128,
+            height: 128,
+            colorDark : config.theme.primaryColor,
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H,
+            logo: config.logo,
+            logoWidth: 32,
+            logoHeight: 32,
+            logoBackgroundColor: '#ffffff',
+            logoBackgroundTransparent: false
+        });
 
 
         // Theme color pickers synchronization
@@ -382,15 +378,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     You can see the results of the campaign in this menu, or in the Analytics page, using the Campaign filter.
                 </p>
                 <div id="campaign-filters">
-                    <label>Date Range:</label>
-                    <select id="campaign-date-filter">
-                        <option value="all">All time</option>
-                        <option value="7">Last 7 days</option>
-                        <option value="30">Last 30 days</option>
-                    </select>
-                    <button id="add-campaign">Add Campaign</button>
+                    <label>Show campaigns starting in the last: 
+                        <select id="campaign-date-filter">
+                            <option value="180">6 months</option>
+                            <option value="30">1 month</option>
+                            <option value="90">3 months</option>
+                            <option value="365">12 months</option>
+                            <option value="all">All time</option>
+                        </select>
+                    </label>
                 </div>
                 <div id="campaigns-list"></div>
+                <button id="add-campaign">Add New Campaign</button>
             </div>
         `;
 
@@ -400,15 +399,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const displayCampaigns = () => {
             campaignsList.innerHTML = '';
             const filterValue = campaignDateFilter.value;
+            const now = new Date();
             let startDate = new Date();
             if (filterValue !== 'all') {
-                startDate.setDate(startDate.getDate() - parseInt(filterValue));
+                startDate.setDate(now.getDate() - parseInt(filterValue));
             } else {
                 startDate = new Date(0);
             }
 
             config.campaigns
-                .filter(c => new Date(c.startDate) >= startDate)
+                .filter(c => {
+                    const campaignStartDate = new Date(c.startDate);
+                    return campaignStartDate >= startDate || campaignStartDate > now;
+                })
                 .forEach(campaign => {
                     const campaignElement = document.createElement('div');
                     campaignElement.classList.add('campaign-admin');
@@ -461,6 +464,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const campaignAdmin = event.target.closest('.campaign-admin');
                 const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
                 const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
+                
+                if (newEndDate < newStartDate) {
+                    alert('Error: End date cannot be before the start date.');
+                    return;
+                }
                 newEndDate.setHours(23, 59, 59, 999); // Set to end of day
 
                 // Overlap check
@@ -684,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </select>
                     <select id="campaign-filter"></select>
                     <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
-                    <button id="export-analytics">Export PNG</button>
+                    <button id="export-analytics">Export Graphs</button>
                 </div>
                 <div id="analytics-charts">
                     <h3>Visitor Engagement</h3>
