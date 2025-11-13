@@ -236,6 +236,11 @@ h2 {
     font-weight: bold;
 }
 
+.upload-indicator {
+    color: #007bff;
+    font-size: 0.8rem;
+}
+
 .update-feedback {
     color: #28a745;
     font-size: 0.8rem;

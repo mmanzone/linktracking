@@ -207,35 +207,58 @@ document.addEventListener('DOMContentLoaded', () => {
             saveConfig(newConfig, e.target);
         });
 
-        document.getElementById('save-content').addEventListener('click', (e) => {
-            const newConfig = { ...config };
-            newConfig.companyName = document.getElementById('company-name-input').value;
-            newConfig.description = document.getElementById('description-input').value;
-            newConfig.logo = document.getElementById('logo-preview').src; // Get latest logo
-            saveConfig(newConfig, e.target);
-        });
+        let newLogoFile = null;
 
         document.getElementById('logo-upload').addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                newLogoFile = file;
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const content = e.target.result.split(',')[1];
-                    const uploadButton = document.getElementById('save-content');
-                    uploadButton.textContent = 'Uploading...';
+                    document.getElementById('logo-preview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('save-content').addEventListener('click', (e) => {
+            const saveButton = e.target;
+            const newConfig = { ...config };
+            newConfig.companyName = document.getElementById('company-name-input').value;
+            newConfig.description = document.getElementById('description-input').value;
+
+            if (newLogoFile) {
+                saveButton.textContent = 'Uploading...';
+                const reader = new FileReader();
+                reader.onload = (readEvent) => {
+                    const content = readEvent.target.result.split(',')[1];
                     fetch('/api/upload', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename: file.name, content })
+                        body: JSON.stringify({ filename: newLogoFile.name, content })
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) throw new Error(`Upload failed with status: ${response.status}`);
+                        return response.json();
+                    })
                     .then(data => {
-                        document.getElementById('logo-preview').src = data.url;
-                        uploadButton.textContent = 'Save Content';
-                        alert('Logo uploaded. Click "Save Content" to finalize.');
+                        if (!data.url) throw new Error('Upload failed, no URL returned.');
+                        newConfig.logo = data.url;
+                        saveConfig(newConfig, saveButton).then(() => {
+                            newLogoFile = null; // Reset after successful save
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Logo upload failed:', error);
+                        alert('Logo upload failed. Please ensure your Vercel Blob store is configured correctly and check the console for details.');
+                        saveButton.textContent = 'Save Content';
                     });
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(newLogoFile);
+            } else {
+                // No new logo, just save the text content and existing logo URL
+                newConfig.logo = document.getElementById('logo-preview').src;
+                saveConfig(newConfig, saveButton);
             }
         });
     }
@@ -330,21 +353,35 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.target.classList.contains('link-icon-upload')) {
                 const file = event.target.files[0];
                 if (file) {
-                    const linkId = event.target.closest('.link-admin').dataset.id;
+                    const linkAdmin = event.target.closest('.link-admin');
+                    const linkId = linkAdmin.dataset.id;
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const content = e.target.result.split(',')[1];
+                        // Provide visual feedback during upload
+                        const originalHtml = linkAdmin.innerHTML;
+                        linkAdmin.innerHTML += '<div class="upload-indicator">Uploading...</div>';
+
                         fetch('/api/upload', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ filename: file.name, content })
                         })
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) throw new Error(`Upload failed with status: ${response.status}`);
+                            return response.json();
+                        })
                         .then(data => {
+                            if (!data.url) throw new Error('Upload failed, no URL returned.');
                             let newConfig = { ...config };
                             const link = newConfig.links.find(l => l.id === linkId);
                             link.icon = data.url;
                             saveConfig(newConfig).then(() => loadAdminContent('links'));
+                        })
+                        .catch(error => {
+                            console.error('Icon upload failed:', error);
+                            alert('Icon upload failed. Please check the console for details.');
+                            linkAdmin.innerHTML = originalHtml; // Restore original content on failure
                         });
                     };
                     reader.readAsDataURL(file);
