@@ -597,21 +597,31 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p>Total Visits: ${campaignVisits.length}</p>
                             <p>Followed Links: ${followedClicks}</p>
                             <p>Abandoned Visits: ${abandonedCampaignVisits}</p>
-                            <canvas id="campaign-chart-${campaign.id}"></canvas>
+                            <div style="height: 200px; margin-top: 20px;"><canvas id="campaign-chart-${campaign.id}"></canvas></div>
                         `;
 
                         new Chart(document.getElementById(`campaign-chart-${campaign.id}`), {
-                            type: 'doughnut',
+                            type: 'bar',
                             data: {
-                                labels: ['Followed Links', 'Abandoned'],
-                                datasets: [{
-                                    data: [followedClicks, abandonedCampaignVisits],
-                                    backgroundColor: [config.theme.secondaryColor, config.theme.primaryColor]
-                                }]
+                                labels: ['Engagement'],
+                                datasets: [
+                                    {
+                                        label: 'Followed Links',
+                                        data: [followedClicks],
+                                        backgroundColor: config.theme.secondaryColor
+                                    },
+                                    {
+                                        label: 'Abandoned Visits',
+                                        data: [abandonedCampaignVisits],
+                                        backgroundColor: config.theme.primaryColor
+                                    }
+                                ]
                             },
                             options: {
+                                indexAxis: 'y',
                                 responsive: true,
-                                maintainAspectRatio: false
+                                maintainAspectRatio: false,
+                                scales: { x: { stacked: true }, y: { stacked: true } }
                             }
                         });
                     });
