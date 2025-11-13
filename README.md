@@ -1,6 +1,6 @@
 # What's the purpose?
 
-We want to engage with communities during events, fairs, commEng but don't have much printed resources anymore ($$ and reducing paper/waste). There are QRcode solutions allowing visitors to get more info, but they often do not include any way to track impact. There are a few freemium solutions out there but the features are limited or change with time
+Organisations want to engage with communities during events, conference, outreach but don't have use printed resources anymore ($$ and reducing paper/waste). There are QRcode solutions allowing visitors to get more info, but they often do not include any way to track impact. There are a few freemium solutions out there but the features are limited or change with time
 
 # What's the solution?
 
@@ -19,6 +19,7 @@ The system is in dev at the moment, feel free to edit anything, change logo, add
 
 # What's coming next?
 
-* Multi-tenancy, ie. having multiple accounts (eg multiple SES units) using the same platform but having their own set of links and customisation. This will include a proper authentication mechanism
+* Multi-tenancy, ie. having multiple accounts (eg multiple organisations) using the same platform but having their own set of links and customisation. This will include a proper authentication mechanism
 * Trackable direct link, to allow the creation of direct link to a specific resource (eg the great shake out resources) via a QR code but still being tracked
 Lead management: ability to collect information eg names, email for people expressing interest
+* Payment gateway integration: ability to take a donation with a direct link to Square or other
