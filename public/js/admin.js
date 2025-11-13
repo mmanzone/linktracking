@@ -246,6 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         newConfig.logo = data.url;
                         saveConfig(newConfig, saveButton).then(() => {
                             newLogoFile = null; // Reset after successful save
+                            loadAdminContent('general'); // Reload to update QR code
                         });
                     })
                     .catch(error => {
