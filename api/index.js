@@ -102,18 +102,21 @@ app.post('/api/auth/login', async (req, res) => {
 
   if (user) {
     const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    const magicLink = `http://localhost:3000/api/auth/verify?token=${token}`;
+    // Dynamically generate the magic link URL
+    const host = req.headers.host;
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
 
     try {
       await resend.emails.send({
-        from: 'login@yourdomain.com',
+        from: process.env.EMAIL_FROM || 'updates@manzone.org', // Use an env var for the from address
         to: email,
         subject: 'Your Magic Login Link',
         html: `<p>Click <a href="${magicLink}">here</a> to log in.</p>`,
       });
       res.json({ success: true, message: 'Magic link sent.' });
     } catch (error) {
-      console.error(error);
+      console.error('Error sending email:', error); // Log the actual error
       res.status(500).json({ success: false, message: 'Error sending email.' });
     }
   } else {
