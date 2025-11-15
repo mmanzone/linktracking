@@ -389,6 +389,13 @@ footer {
     font-weight: bold;
 }
 
+.campaign-link-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
 @media (max-width: 720px) {
     /* Responsive styles for smaller screens */
     .link-admin {
