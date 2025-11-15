@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.style.setProperty('--secondary-color', config.theme.secondaryColor);
             document.documentElement.style.setProperty('--secondary-text-color', config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor));
 
-            document.getElementById('company-name').textContent = config.companyName;
+            document.getElementById('company-name-header').textContent = config.companyName;
             document.getElementById('logo').src = config.logo;
             document.getElementById('description').textContent = config.description;
 
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bannerContainer.innerHTML = `<div class="campaign-message">${activeCampaign.message}</div>`;
                 const campaignBanner = bannerContainer.querySelector('.campaign-message');
                 campaignBanner.style.backgroundColor = config.theme.containerColor || '#ffffff';
-                campaignBanner.style.color = getContrastYIQ(config.theme.containerColor || '#ffffff');
+                campaignBanner.style.color = config.theme.primaryColor;
                 
                 // Use the campaign's link order, filtering out any nulls if a link was deleted
                 linksToShow = activeCampaign.links.map(linkId => config.links.find(l => l.id === linkId)).filter(Boolean);

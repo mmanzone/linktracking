@@ -43,6 +43,12 @@ header {
     margin: 0;
 }
 
+#company-name-header {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
 #description {
     font-size: 1rem;
     margin-top: 8px;
@@ -373,6 +379,13 @@ footer {
     position: fixed;
     bottom: 10px;
     right: 10px;
+}
+
+.campaign-message {
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
 }
 
 @media (max-width: 720px) {
