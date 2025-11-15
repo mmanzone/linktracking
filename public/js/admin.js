@@ -340,7 +340,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // QR Code Generation
         const tenantUrl = `${window.location.origin}/${currentTenant.name}`;
         
-        const qrCodeStandard = new QRCode(document.getElementById("qrcode-standard"), {
+        // Standard QR Code
+        new QRCode(document.getElementById("qrcode-standard"), {
             text: tenantUrl,
             width: 256,
             height: 256,
@@ -349,40 +350,59 @@ document.addEventListener('DOMContentLoaded', () => {
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        const qrCodeLogo = new QRCode(document.getElementById("qrcode-logo"), {
+        // QR Code with Logo (Manual Composition)
+        const qrLogoContainer = document.getElementById("qrcode-logo");
+        qrLogoContainer.innerHTML = ''; // Clear previous content
+
+        new QRCode(qrLogoContainer, {
             text: tenantUrl,
             width: 256,
             height: 256,
-            colorDark : config.theme.primaryColor,
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H,
-            logo: config.logo,
-            logoWidth: 64,
-            logoHeight: 64,
-            logoBackgroundColor: '#ffffff',
-            logoBackgroundTransparent: false,
-            logoImage: (() => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                img.src = config.logo;
-                return img;
-            })()
+            colorDark: config.theme.primaryColor,
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
         });
+
+        // Manually draw the logo onto the canvas to avoid tainting
+        const canvas = qrLogoContainer.querySelector('canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            const logoImg = new Image();
+            logoImg.crossOrigin = "Anonymous";
+            logoImg.onload = function() {
+                const logoSize = 64;
+                const logoX = (256 - logoSize) / 2;
+                const logoY = (256 - logoSize) / 2;
+                
+                // Draw a white background behind the logo for clarity
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(logoX, logoY, logoSize, logoSize);
+                
+                // Draw the logo image
+                ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+            };
+            logoImg.src = config.logo;
+        }
+
 
         // Add Download Buttons
         document.getElementById('download-standard').addEventListener('click', () => {
             const canvas = document.querySelector('#qrcode-standard canvas');
-            const link = document.createElement('a');
-            link.download = 'qrcode-standard.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            if (canvas) {
+                const link = document.createElement('a');
+                link.download = 'qrcode-standard.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
         });
         document.getElementById('download-logo').addEventListener('click', () => {
             const canvas = document.querySelector('#qrcode-logo canvas');
-            const link = document.createElement('a');
-            link.download = 'qrcode-logo.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            if (canvas) {
+                const link = document.createElement('a');
+                link.download = 'qrcode-logo.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
         });
 
 
