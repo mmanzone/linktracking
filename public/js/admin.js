@@ -114,7 +114,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         
-        // Invite logic to be added here
+        document.getElementById('invite-user-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('invite-email-input').value;
+            fetch('/api/users/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            }).then(() => {
+                document.getElementById('invite-email-input').value = '';
+                alert('Invite sent!');
+                loadAdminContent('users');
+            });
+        });
     }
     
     function renderTenantsTab() {
@@ -950,19 +962,34 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch(url)
                 .then(response => response.json())
                 .then(analytics => {
-                    let processedAnalytics = analytics;
+                    let allConfigs = null;
                     if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
-                        // Aggregate data from all tenants
-                        processedAnalytics = Object.values(analytics).reduce((acc, tenantAnalytics) => {
-                            if (tenantAnalytics) {
-                                acc.visits.push(...tenantAnalytics.visits);
-                                acc.clicks.push(...tenantAnalytics.clicks);
-                            }
-                            return acc;
-                        }, { visits: [], clicks: [] });
+                        // Fetch all configs to resolve link names
+                        fetch('/api/admin/all-configs')
+                            .then(res => res.json())
+                            .then(configs => {
+                                allConfigs = configs;
+                                processAnalytics(analytics, allConfigs);
+                            });
+                    } else {
+                        processAnalytics(analytics);
                     }
-                    filterAnalyticsData(processedAnalytics);
                 });
+        };
+
+        const processAnalytics = (analytics, allConfigs = null) => {
+            let processedAnalytics = analytics;
+            if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
+                // Aggregate data from all tenants
+                processedAnalytics = Object.values(analytics).reduce((acc, tenantAnalytics) => {
+                    if (tenantAnalytics) {
+                        acc.visits.push(...tenantAnalytics.visits);
+                        acc.clicks.push(...tenantAnalytics.clicks);
+                    }
+                    return acc;
+                }, { visits: [], clicks: [] });
+            }
+            filterAnalyticsData(processedAnalytics, allConfigs);
         };
 
         const getSydneyHour = (utcIsoString) => {
@@ -1066,6 +1093,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (linkId.startsWith('social-')) {
                     const name = linkId.replace('social-', '');
                     return name.charAt(0).toUpperCase() + name.slice(1);
+                }
+                // In master admin view, we need to check all configs
+                if (currentUser.role === 'master-admin' && allConfigs) {
+                    for (const tenantId in allConfigs) {
+                        const link = allConfigs[tenantId].links.find(l => l.id === linkId);
+                        if (link) return link.text;
+                    }
                 }
                 return config.links.find(l => l.id === linkId)?.text || 'Unknown Link';
             };

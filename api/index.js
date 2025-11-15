@@ -161,9 +161,9 @@ app.post('/api/auth/login', async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: `"Linktracking" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+        from: `"linkreach.xyz" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
         to: email,
-        subject: 'Your Login Link for Linktracking',
+        subject: 'Your Login Link for linkreach.xyz',
         html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6;">
   <h2>Log in to your account</h2>
@@ -173,7 +173,7 @@ app.post('/api/auth/login', async (req, res) => {
     <a href="${magicLink}" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
   </p>
   <p>This link will expire in 15 minutes. If you did not request this email, you can safely ignore it.</p>
-  <p>Thanks,<br>The Linktracking Team</p>
+  <p>Thanks,<br>The linkreach.xyz Team</p>
   <hr style="border: none; border-top: 1px solid #eee;">
   <p style="font-size: 0.8em; color: #6c757d;">
     If you're having trouble with the button above, copy and paste the URL below into your web browser:<br>
@@ -249,19 +249,19 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     if (sendWelcomeEmail) {
         try {
             await resend.emails.send({
-                from: `"Linktracking" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                from: `"linkreach.xyz" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
-                subject: `Welcome to Linktracking, ${displayName}!`,
+                subject: `Welcome to linkreach.xyz, ${displayName}!`,
                 html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-  <h2>Your Linktracking account is ready!</h2>
+  <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
-  <p>An account has been created for you on Linktracking for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
+  <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
   <p>Your public landing page is available at: <a href="${process.env.BASE_URL}/${name}">${process.env.BASE_URL}/${name}</a></p>
   <p style="margin: 20px 0;">
     <a href="${process.env.BASE_URL}/login" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
-  <p>Thanks,<br>The Linktracking Team</p>
+  <p>Thanks,<br>The linkreach.xyz Team</p>
 </div>
 `,
             });
@@ -408,6 +408,16 @@ app.get('/api/admin/analytics', authenticate, requireMasterAdmin, async (req, re
     }
 });
 
+app.get('/api/admin/all-configs', authenticate, requireMasterAdmin, async (req, res) => {
+    const tenantKeys = await redis.keys('tenant:*');
+    const tenants = await Promise.all(tenantKeys.map(key => redis.get(key)));
+    const allConfigs = {};
+    for (const tenant of tenants) {
+        allConfigs[tenant.id] = await redis.get(`config:${tenant.id}`);
+    }
+    res.json(allConfigs);
+});
+
 app.get('/api/users', authenticate, async (req, res) => {
     const tenant = req.tenant;
     const userKeys = tenant.users;
@@ -420,6 +430,56 @@ app.get('/api/users', authenticate, async (req, res) => {
         });
     }));
     res.json(users.filter(Boolean));
+});
+
+app.post('/api/users/invite', authenticate, async (req, res) => {
+    const { email } = req.body;
+    const tenant = req.tenant;
+
+    // Check if user already exists
+    const existingUser = await redis.get(`user:${email}`);
+    if (existingUser) {
+        // Add user to tenant if not already a member
+        if (!existingUser.tenants.includes(tenant.id)) {
+            existingUser.tenants.push(tenant.id);
+            await redis.set(`user:${email}`, existingUser);
+        }
+    } else {
+        // Create new user
+        const userId = `user_${Date.now()}`;
+        await redis.set(`user:${email}`, {
+            id: userId,
+            email,
+            tenants: [tenant.id],
+            role: 'user',
+        });
+        
+        tenant.users.push(userId);
+        await redis.set(`tenant:${tenant.name}`, tenant);
+    }
+
+    // Send invite email
+    try {
+        await resend.emails.send({
+            from: `"linkreach.xyz" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+            to: email,
+            subject: `You've been invited to ${tenant.displayName} on linkreach.xyz`,
+            html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6;">
+  <h2>You've been invited!</h2>
+  <p>You have been invited to join the "${tenant.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
+  <p style="margin: 20px 0;">
+    <a href="${process.env.BASE_URL}/login" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
+  </p>
+  <p>Thanks,<br>The linkreach.xyz Team</p>
+</div>
+`,
+        });
+    } catch (error) {
+        console.error('Error sending invite email:', error);
+    }
+
+    res.json({ success: true });
 });
 
 module.exports = app;

@@ -6,6 +6,10 @@
         },
         {
             "source": "/:tenant",
+            "destination": "/tenant.html"
+        },
+        {
+            "source": "/",
             "destination": "/index.html"
         }
     ],
