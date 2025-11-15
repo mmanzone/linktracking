@@ -28,6 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 tenantsTab.dataset.tab = 'tenants';
                 tenantsTab.textContent = 'Tenants';
                 tabsContainer.appendChild(tenantsTab);
+
+                const usersTab = document.createElement('button');
+                usersTab.classList.add('tab-link');
+                usersTab.dataset.tab = 'users';
+                usersTab.textContent = 'Users';
+                tabsContainer.appendChild(usersTab);
             } else {
                 const usersTab = document.createElement('button');
                 usersTab.classList.add('tab-link');
@@ -91,20 +97,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderUsersTab() {
+        const isAdmin = currentUser.role === 'master-admin';
+        const userApiUrl = isAdmin ? '/api/admin/users' : '/api/users';
+
         adminContentDiv.innerHTML = `
             <div id="users-tab" class="tab-content active">
                 <h2>User Management</h2>
                 <div id="users-list"></div>
+                ${!isAdmin ? `
                 <h3>Invite New User</h3>
                 <form id="invite-user-form">
                     <label>Email: <input type="email" id="invite-email-input" required></label>
                     <button type="submit">Send Invite</button>
                 </form>
+                ` : ''}
             </div>
         `;
 
         const usersList = document.getElementById('users-list');
-        fetch('/api/users')
+        fetch(userApiUrl)
             .then(res => res.json())
             .then(users => {
                 users.forEach(user => {
@@ -133,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (e.target.classList.contains('edit-user')) {
                 const row = e.target.closest('.user-admin-row');
-                fetch('/api/users').then(res => res.json()).then(users => {
+                fetch(userApiUrl).then(res => res.json()).then(users => {
                     const user = users.find(u => u.id === userId);
                     row.innerHTML = `
                         <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
@@ -164,19 +175,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        document.getElementById('invite-user-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('invite-email-input').value;
-            fetch('/api/users/invite', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            }).then(() => {
-                document.getElementById('invite-email-input').value = '';
-                alert('Invite sent!');
-                loadAdminContent('users');
+        if (!isAdmin) {
+            document.getElementById('invite-user-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('invite-email-input').value;
+                fetch('/api/users/invite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                }).then(() => {
+                    document.getElementById('invite-email-input').value = '';
+                    alert('Invite sent!');
+                    loadAdminContent('users');
+                });
             });
-        });
+        }
     }
     
     function renderTenantsTab() {
@@ -320,11 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div id="qrcode-logo"></div>
                         <button id="download-logo">Download</button>
                     </div>
-                    <div>
-                        <p>With Name</p>
-                        <div id="qrcode-text"></div>
-                        <button id="download-text">Download</button>
-                    </div>
                 </div>
             </div>
         `;
@@ -334,60 +342,25 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const qrCodeStandard = new QRCode(document.getElementById("qrcode-standard"), {
             text: tenantUrl,
-            width: 128,
-            height: 128,
+            width: 256,
+            height: 256,
             colorDark : config.theme.primaryColor,
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        new QRCode(document.getElementById("qrcode-logo"), {
+        const qrCodeLogo = new QRCode(document.getElementById("qrcode-logo"), {
             text: tenantUrl,
-            width: 128,
-            height: 128,
+            width: 256,
+            height: 256,
             colorDark : config.theme.primaryColor,
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H,
             logo: config.logo,
-            logoWidth: 32,
-            logoHeight: 32,
+            logoWidth: 64,
+            logoHeight: 64,
             logoBackgroundColor: '#ffffff',
             logoBackgroundTransparent: false
-        });
-
-        // New QR Code with Text
-        const qrCodeText = document.getElementById('qrcode-text');
-        const canvas = document.createElement('canvas');
-        qrCodeText.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
-        const qr = new QRCode(document.createElement('div'), {
-            text: tenantUrl,
-            width: 128,
-            height: 128,
-            colorDark : config.theme.primaryColor,
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H,
-            logo: config.logo,
-            logoWidth: 32,
-            logoHeight: 32,
-            logoBackgroundColor: '#ffffff',
-            logoBackgroundTransparent: false,
-            onRenderingEnd: (qrCodeOptions, dataURL) => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                img.onload = () => {
-                    canvas.width = 128;
-                    canvas.height = 128 + 30;
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
-                    ctx.fillStyle = config.theme.primaryColor;
-                    ctx.font = '16px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(config.companyName, 64, 128 + 20);
-                };
-                img.src = dataURL;
-            }
         });
 
         // Add Download Buttons
@@ -402,12 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.querySelector('#qrcode-logo canvas');
             const link = document.createElement('a');
             link.download = 'qrcode-logo.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        });
-        document.getElementById('download-text').addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'qrcode-with-name.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
         });
@@ -685,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderCampaignsTab(config) {
+    function renderCampaignsTab() {
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
                 <h2>Campaign Management</h2>
@@ -715,7 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const campaignsList = document.getElementById('campaigns-list');
         const campaignDateFilter = document.getElementById('campaign-date-filter');
 
-        const displayCampaigns = (campaigns) => {
+        const displayCampaigns = (campaigns, config) => {
             campaignsList.innerHTML = '';
             const filterValue = campaignDateFilter.value;
             const now = new Date();
@@ -750,6 +717,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         };
 
+        const fetchAndDisplayCampaigns = () => {
+            fetch('/api/admin/config').then(res => res.json()).then(config => {
+                displayCampaigns(config.campaigns, config);
+            });
+        };
+        
         document.getElementById('add-campaign').addEventListener('click', () => {
             fetch('/api/admin/config').then(res => res.json()).then(config => {
                 const newConfig = { ...config };
@@ -771,185 +744,189 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        fetch('/api/admin/config').then(res => res.json()).then(config => displayCampaigns(config.campaigns));
-        campaignDateFilter.addEventListener('change', () => fetch('/api/admin/config').then(res => res.json()).then(config => displayCampaigns(config.campaigns)));
-
+        fetchAndDisplayCampaigns();
+        campaignDateFilter.addEventListener('change', fetchAndDisplayCampaigns);
 
         campaignsList.addEventListener('click', (event) => {
             const campaignId = event.target.closest('.campaign-admin')?.dataset.id;
             if (!campaignId) return;
 
-            let newConfig = { ...config };
-            const campaign = newConfig.campaigns.find(c => c.id === campaignId);
+            fetch('/api/admin/config').then(res => res.json()).then(config => {
+                let newConfig = { ...config };
+                const campaign = newConfig.campaigns.find(c => c.id === campaignId);
 
-            if (event.target.classList.contains('save-edit-campaign')) {
-                const campaignAdmin = event.target.closest('.campaign-admin');
-                const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
-                const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
-                
-                if (newEndDate < newStartDate) {
-                    alert('Error: End date cannot be before the start date.');
-                    return;
-                }
-                newEndDate.setHours(23, 59, 59, 999); // Set to end of day
+                if (event.target.classList.contains('save-edit-campaign')) {
+                    const campaignAdmin = event.target.closest('.campaign-admin');
+                    const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
+                    const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
+                    
+                    if (newEndDate < newStartDate) {
+                        alert('Error: End date cannot be before the start date.');
+                        return;
+                    }
+                    newEndDate.setHours(23, 59, 59, 999); // Set to end of day
 
-                // Overlap check
-                const overlaps = newConfig.campaigns.some(c => {
-                    if (c.id === campaignId) return false;
-                    const existingStart = new Date(c.startDate);
-                    const existingEnd = new Date(c.endDate);
-                    return (newStartDate < existingEnd && newEndDate > existingStart);
-                });
-
-                if (overlaps) {
-                    alert('Error: Campaign dates overlap with an existing campaign.');
-                    return;
-                }
-
-                campaign.name = campaignAdmin.querySelector('.campaign-name-edit').value;
-                campaign.description = campaignAdmin.querySelector('.campaign-description-edit').value;
-                campaign.message = campaignAdmin.querySelector('.campaign-message-edit').value;
-                campaign.startDate = newStartDate.toISOString();
-                campaign.endDate = newEndDate.toISOString();
-                
-                const linkRows = campaignAdmin.querySelectorAll('.campaign-link-row');
-                campaign.links = Array.from(linkRows)
-                    .filter(row => row.querySelector('input[type="checkbox"]').checked)
-                    .map(row => row.dataset.id);
-
-                saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
-            }
-
-            if (event.target.classList.contains('cancel-edit-campaign')) {
-                loadAdminContent('campaigns');
-            }
-
-            if (event.target.classList.contains('edit-campaign')) {
-                const campaignAdmin = event.target.closest('.campaign-admin');
-                
-                // Correctly sort links: ordered campaign links first, then the rest
-                const campaignLinkIds = new Set(campaign.links);
-                const sortedLinksForCampaign = [
-                    ...campaign.links.map(id => config.links.find(l => l.id === id)).filter(Boolean),
-                    ...config.links.filter(l => !campaignLinkIds.has(l.id))
-                ];
-
-                const campaignLinksHtml = sortedLinksForCampaign.map(link => `
-                    <div class="campaign-link-row" data-id="${link.id}">
-                        <div class="link-order">
-                            <button class="move-link-up">▲</button>
-                            <button class="move-link-down">▼</button>
-                        </div>
-                        <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
-                        <div class="link" style="background-color: ${config.theme.secondaryColor}; color: ${config.theme.secondaryTextColor || 'black'};">
-                            <img src="${link.icon}" alt="${link.text}">
-                            <span>${link.text}</span>
-                        </div>
-                    </div>
-                `).join('');
-
-                campaignAdmin.innerHTML = `
-                    <div style="width: 100%;">
-                        <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
-                        <label>Admin Description: <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
-                        <label>Banner Message: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40" style="width: 100%;"></label>
-                        <div style="display: flex; gap: 10px;">
-                            <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
-                            <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
-                        </div>
-                        <h4>Links</h4>
-                        <div class="campaign-links-edit">${campaignLinksHtml}</div>
-                        <div class="button-container">
-                            <button class="save-edit-campaign">Save</button>
-                            <button class="cancel-edit-campaign">Cancel</button>
-                        </div>
-                    </div>
-                `;
-            }
-
-            if (event.target.classList.contains('move-link-up')) {
-                const linkRow = event.target.closest('.campaign-link-row');
-                if (linkRow.previousElementSibling) {
-                    linkRow.parentNode.insertBefore(linkRow, linkRow.previousElementSibling);
-                }
-            }
-
-            if (event.target.classList.contains('move-link-down')) {
-                const linkRow = event.target.closest('.campaign-link-row');
-                if (linkRow.nextElementSibling) {
-                    linkRow.parentNode.insertBefore(linkRow.nextElementSibling, linkRow);
-                }
-            }
-
-            if (event.target.classList.contains('view-campaign-stats')) {
-                const campaignAdmin = event.target.closest('.campaign-admin');
-                let statsContainer = campaignAdmin.querySelector('.campaign-stats-container');
-                if (statsContainer) {
-                    statsContainer.remove();
-                    return;
-                }
-
-                statsContainer = document.createElement('div');
-                statsContainer.classList.add('campaign-stats-container');
-                campaignAdmin.appendChild(statsContainer);
-
-                fetch('/api/analytics')
-                    .then(response => response.json())
-                    .then(analytics => {
-                        const campaignStartDate = new Date(campaign.startDate);
-                        const campaignEndDate = new Date(campaign.endDate);
-                        const campaignVisits = analytics.visits.filter(visit => {
-                            const visitDate = new Date(visit.timestamp);
-                            return visitDate >= campaignStartDate && visitDate <= campaignEndDate;
-                        });
-                        const campaignClicks = analytics.clicks.filter(click => {
-                            const clickDate = new Date(click.timestamp);
-                            return clickDate >= campaignStartDate && clickDate <= campaignEndDate;
-                        });
-                        const abandonedCampaignVisits = campaignVisits.length - new Set(campaignClicks.map(c => c.ip)).size;
-                        const followedClicks = campaignClicks.length;
-
-                        statsContainer.innerHTML = `
-                            <h4>Stats for ${campaign.name}</h4>
-                            <p>Total Visits: ${campaignVisits.length}</p>
-                            <p>Followed Links: ${followedClicks}</p>
-                            <p>Abandoned Visits: ${abandonedCampaignVisits}</p>
-                            <div style="height: 200px; margin-top: 20px;"><canvas id="campaign-chart-${campaign.id}"></canvas></div>
-                        `;
-
-                        new Chart(document.getElementById(`campaign-chart-${campaign.id}`), {
-                            type: 'bar',
-                            data: {
-                                labels: ['Engagement'],
-                                datasets: [
-                                    {
-                                        label: 'Followed Links',
-                                        data: [followedClicks],
-                                        backgroundColor: config.theme.secondaryColor
-                                    },
-                                    {
-                                        label: 'Abandoned Visits',
-                                        data: [abandonedCampaignVisits],
-                                        backgroundColor: config.theme.primaryColor
-                                    }
-                                ]
-                            },
-                            options: {
-                                indexAxis: 'y',
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: { x: { stacked: true }, y: { stacked: true } }
-                            }
-                        });
+                    // Overlap check
+                    const overlaps = newConfig.campaigns.some(c => {
+                        if (c.id === campaignId) return false;
+                        const existingStart = new Date(c.startDate);
+                        const existingEnd = new Date(c.endDate);
+                        return (newStartDate < existingEnd && newEndDate > existingStart);
                     });
-            }
 
-            if (event.target.classList.contains('delete-campaign')) {
-                if (confirm('Are you sure you want to delete this campaign?')) {
-                    newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
-                    saveConfig(newConfig).then(() => loadAdminContent('campaigns'));
+                    if (overlaps) {
+                        alert('Error: Campaign dates overlap with an existing campaign.');
+                        return;
+                    }
+
+                    campaign.name = campaignAdmin.querySelector('.campaign-name-edit').value;
+                    campaign.description = campaignAdmin.querySelector('.campaign-description-edit').value;
+                    campaign.message = campaignAdmin.querySelector('.campaign-message-edit').value;
+                    campaign.startDate = newStartDate.toISOString();
+                    campaign.endDate = newEndDate.toISOString();
+                    
+                    const linkRows = campaignAdmin.querySelectorAll('.campaign-link-row');
+                    campaign.links = Array.from(linkRows)
+                        .filter(row => row.querySelector('input[type="checkbox"]').checked)
+                        .map(row => row.dataset.id);
+
+                    saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
                 }
-            }
+
+                if (event.target.classList.contains('cancel-edit-campaign')) {
+                    loadAdminContent('campaigns');
+                }
+
+                if (event.target.classList.contains('edit-campaign')) {
+                    const campaignAdmin = event.target.closest('.campaign-admin');
+                    
+                    // Correctly sort links: ordered campaign links first, then the rest
+                    const campaignLinkIds = new Set(campaign.links);
+                    const sortedLinksForCampaign = [
+                        ...campaign.links.map(id => config.links.find(l => l.id === id)).filter(Boolean),
+                        ...config.links.filter(l => !campaignLinkIds.has(l.id))
+                    ];
+
+                    const campaignLinksHtml = sortedLinksForCampaign.map(link => `
+                        <div class="campaign-link-row" data-id="${link.id}">
+                            <div class="link-order">
+                                <button class="move-link-up">▲</button>
+                                <button class="move-link-down">▼</button>
+                            </div>
+                            <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                            <div class="link" style="background-color: ${config.theme.secondaryColor}; color: ${config.theme.secondaryTextColor || 'black'};">
+                                <img src="${link.icon}" alt="${link.text}">
+                                <span>${link.text}</span>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    campaignAdmin.innerHTML = `
+                        <div style="width: 100%;">
+                            <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
+                            <label>Admin Description: <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
+                            <label>Banner Message: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40" style="width: 100%;"></label>
+                            <div style="display: flex; gap: 10px;">
+                                <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
+                                <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
+                            </div>
+                            <h4>Links</h4>
+                            <div class="campaign-links-edit">${campaignLinksHtml}</div>
+                            <div class="button-container">
+                                <button class="save-edit-campaign">Save</button>
+                                <button class="cancel-edit-campaign">Cancel</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (event.target.classList.contains('move-link-up')) {
+                    const linkRow = event.target.closest('.campaign-link-row');
+                    if (linkRow.previousElementSibling) {
+                        linkRow.parentNode.insertBefore(linkRow, linkRow.previousElementSibling);
+                    }
+                }
+
+                if (event.target.classList.contains('move-link-down')) {
+                    const linkRow = event.target.closest('.campaign-link-row');
+                    if (linkRow.nextElementSibling) {
+                        linkRow.parentNode.insertBefore(linkRow.nextElementSibling, linkRow);
+                    }
+                }
+
+                if (event.target.classList.contains('view-campaign-stats')) {
+                    const campaignAdmin = event.target.closest('.campaign-admin');
+                    let statsContainer = campaignAdmin.querySelector('.campaign-stats-container');
+                    if (statsContainer) {
+                        statsContainer.remove();
+                        return;
+                    }
+
+                    statsContainer = document.createElement('div');
+                    statsContainer.classList.add('campaign-stats-container');
+                    campaignAdmin.appendChild(statsContainer);
+
+                    fetch('/api/analytics')
+                        .then(response => response.json())
+                        .then(analytics => {
+                            const campaignStartDate = new Date(campaign.startDate);
+                            const campaignEndDate = new Date(campaign.endDate);
+                            const campaignVisits = analytics.visits.filter(visit => {
+                                const visitDate = new Date(visit.timestamp);
+                                return visitDate >= campaignStartDate && visitDate <= campaignEndDate;
+                            });
+                            const campaignClicks = analytics.clicks.filter(click => {
+                                const clickDate = new Date(click.timestamp);
+                                return clickDate >= campaignStartDate && clickDate <= campaignEndDate;
+                            });
+                            const abandonedCampaignVisits = campaignVisits.length - new Set(campaignClicks.map(c => c.ip)).size;
+                            const followedClicks = campaignClicks.length;
+
+                            statsContainer.innerHTML = `
+                                <h4>Stats for ${campaign.name}</h4>
+                                <p>Total Visits: ${campaignVisits.length}</p>
+                                <p>Followed Links: ${followedClicks}</p>
+                                <p>Abandoned Visits: ${abandonedCampaignVisits}</p>
+                                <div style="height: 200px; margin-top: 20px;"><canvas id="campaign-chart-${campaign.id}"></canvas></div>
+                            `;
+
+                            new Chart(document.getElementById(`campaign-chart-${campaign.id}`), {
+                                type: 'bar',
+                                data: {
+                                    labels: ['Engagement'],
+                                    datasets: [
+                                        {
+                                            label: 'Followed Links',
+                                            data: [followedClicks],
+                                            backgroundColor: config.theme.secondaryColor
+                                        },
+                                        {
+                                            label: 'Abandoned Visits',
+                                            data: [abandonedCampaignVisits],
+                                            backgroundColor: config.theme.primaryColor
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    indexAxis: 'y',
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: { x: { stacked: true }, y: { stacked: true } }
+                                }
+                            });
+                        });
+                }
+
+                if (event.target.classList.contains('delete-campaign')) {
+                    if (confirm('Are you sure you want to delete this campaign?')) {
+                        fetch('/api/admin/config').then(res => res.json()).then(config => {
+                            let newConfig = { ...config };
+                            newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
+                            saveConfig(newConfig).then(() => loadAdminContent('campaigns'));
+                        });
+                    }
+                }
+            });
         });
     }
 

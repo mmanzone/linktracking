@@ -548,4 +548,10 @@ app.delete('/api/users/:id', authenticate, async (req, res) => {
     res.json({ success: true });
 });
 
+app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) => {
+    const userKeys = await redis.keys('user:*');
+    const users = await Promise.all(userKeys.map(key => redis.get(key)));
+    res.json(users);
+});
+
 module.exports = app;

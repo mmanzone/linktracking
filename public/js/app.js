@@ -43,30 +43,31 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('description').textContent = config.description;
 
             const socialLinksContainer = document.getElementById('social-links');
-            socialLinksContainer.innerHTML = ''; // Clear existing
-            config.socialLinks.forEach(link => {
-                if (link.url && link.url !== '#') {
-                    const a = document.createElement('a');
-                    a.href = link.url;
-                    a.target = '_blank'; // Open in new window
-                    a.dataset.id = `social-${link.name}`; // Add data-id for tracking
-                    a.innerHTML = `<img src="/images/icons/${link.name}.svg" alt="${link.name}">`;
-                    a.style.color = primaryTextColor;
-                    socialLinksContainer.appendChild(a);
-                }
-            });
+            if (socialLinksContainer) {
+                socialLinksContainer.innerHTML = ''; // Clear existing
+                config.socialLinks.forEach(link => {
+                    if (link.url && link.url !== '#') {
+                        const a = document.createElement('a');
+                        a.href = link.url;
+                        a.target = '_blank'; // Open in new window
+                        a.dataset.id = `social-${link.name}`; // Add data-id for tracking
+                        a.innerHTML = `<img src="/images/icons/${link.name}.svg" alt="${link.name}">`;
+                        socialLinksContainer.appendChild(a);
+                    }
+                });
 
-            socialLinksContainer.addEventListener('click', (event) => {
-                const link = event.target.closest('a');
-                if (link && link.dataset.id) {
-                    const linkId = link.dataset.id;
-                    fetch(`/api/click?tenant=${tenant}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ linkId })
-                    });
-                }
-            });
+                socialLinksContainer.addEventListener('click', (event) => {
+                    const link = event.target.closest('a');
+                    if (link && link.dataset.id) {
+                        const linkId = link.dataset.id;
+                        fetch(`/api/click?tenant=${tenant}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ linkId })
+                        });
+                    }
+                });
+            }
 
             const linksContainer = document.getElementById('links');
             linksContainer.innerHTML = ''; // Clear existing
