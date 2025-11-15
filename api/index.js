@@ -174,12 +174,12 @@ app.post('/api/auth/login', async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: `"LinkReach Login" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+        from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
         to: email,
         subject: 'Your Login Link for linkreach.xyz',
         html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${process.env.BASE_URL}/images/logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+  <img src="${process.env.BASE_URL}/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
   <h2>Log in to your account</h2>
   <p>Hello,</p>
   <p>You requested a link to log in to your account. Click the button below to sign in.</p>
@@ -187,9 +187,10 @@ app.post('/api/auth/login', async (req, res) => {
     <a href="${magicLink}" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
   </p>
   <p>This link will expire in 15 minutes. If you did not request this email, you can safely ignore it.</p>
-  <p>Thanks,<br>The linkreach.xyz Team</p>
+  <p>Thanks,<br>The LinkReach Team</p>
   <hr style="border: none; border-top: 1px solid #eee;">
   <p style="font-size: 0.8em; color: #939598;">
+    Measure Your Impact<br><br>
     If you're having trouble with the button above, copy and paste the URL below into your web browser:<br>
     <a href="${magicLink}" style="color: #52b8da;">${magicLink}</a>
   </p>
@@ -266,12 +267,12 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
             const protocol = host.includes('localhost') ? 'http' : 'https';
             const baseUrl = process.env.BASE_URL || `${protocol}://${host}`;
             await resend.emails.send({
-                from: `"LinkReach Welcome" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
                 subject: `Welcome to linkreach.xyz, ${displayName}!`,
                 html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${baseUrl}/images/logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+  <img src="${baseUrl}/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
   <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
   <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
@@ -279,7 +280,9 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
-  <p>Thanks,<br>The linkreach.xyz Team</p>
+  <p>Thanks,<br>The LinkReach Team</p>
+  <hr style="border: none; border-top: 1px solid #eee;">
+  <p style="font-size: 0.8em; color: #939598;">Measure Your Impact</p>
 </div>
 `,
             });
@@ -482,18 +485,20 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const baseUrl = process.env.BASE_URL || `${protocol}://${host}`;
         await resend.emails.send({
-            from: `"LinkReach Welcome" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+            from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
             to: email,
             subject: `You've been invited to ${tenant.displayName} on linkreach.xyz`,
             html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${baseUrl}/images/logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+  <img src="${baseUrl}/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
   <h2>You've been invited!</h2>
   <p>You have been invited to join the "${tenant.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
   <p style="margin: 20px 0;">
-    <a href="${baseUrl}/login?invited=true" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
+    <a href="${baseUrl}/login?invited=true" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Activate Your Account</a>
   </p>
-  <p>Thanks,<br>The linkreach.xyz Team</p>
+  <p>Thanks,<br>The LinkReach Team</p>
+  <hr style="border: none; border-top: 1px solid #eee;">
+  <p style="font-size: 0.8em; color: #939598;">Measure Your Impact</p>
 </div>
 `,
         });
