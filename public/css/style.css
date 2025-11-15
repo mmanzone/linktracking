@@ -293,6 +293,7 @@ h2 {
     align-items: center;
     height: 100vh;
     text-align: center;
+    font-family: Arial, sans-serif;
 }
 
 .homepage-header {
@@ -300,19 +301,44 @@ h2 {
     margin-bottom: 40px;
 }
 
+.homepage-header img {
+    max-width: 400px;
+    margin-bottom: 2rem;
+}
+
 .homepage-header h1 {
-    font-size: 4rem;
+    font-size: 2.5rem;
+    color: #294a7f; /* Dark Blue from logo */
     font-weight: bold;
     margin-bottom: 0.5rem;
 }
 
 .homepage-header p {
-    font-size: 1.5rem;
-    color: #6c757d;
+    font-size: 1.25rem;
+    color: #939598; /* Grey from logo */
 }
 
-.cta {
-    margin-top: 3rem;
+.homepage .button {
+    background-color: #294a7f; /* Dark Blue from logo */
+    color: #ffffff;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.homepage .button:hover {
+    background-color: #52b8da; /* Light Blue from logo */
+}
+
+#error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    margin-bottom: 1rem;
 }
 
 .features {
