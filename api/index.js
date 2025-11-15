@@ -144,10 +144,26 @@ app.post('/api/auth/login', async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: process.env.EMAIL_FROM || 'updates@manzone.org', // Use an env var for the from address
+        from: process.env.EMAIL_FROM || 'updates@manzone.org',
         to: email,
-        subject: 'Your Magic Login Link',
-        html: `<p>Click <a href="${magicLink}">here</a> to log in.</p>`,
+        subject: 'Your Login Link for Linktracking',
+        html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6;">
+  <h2>Log in to your account</h2>
+  <p>Hello,</p>
+  <p>You requested a link to log in to your account. Click the button below to sign in.</p>
+  <p style="margin: 20px 0;">
+    <a href="${magicLink}" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
+  </p>
+  <p>This link will expire in 15 minutes. If you did not request this email, you can safely ignore it.</p>
+  <p>Thanks,<br>The Linktracking Team</p>
+  <hr style="border: none; border-top: 1px solid #eee;">
+  <p style="font-size: 0.8em; color: #6c757d;">
+    If you're having trouble with the button above, copy and paste the URL below into your web browser:<br>
+    <a href="${magicLink}" style="color: #007bff;">${magicLink}</a>
+  </p>
+</div>
+`,
       });
       console.log(`Magic link sent to: ${email}`);
       res.json({ success: true, message: 'Magic link sent.' });
