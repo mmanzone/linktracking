@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const { Redis } = require('@upstash/redis');
 const { put } = require('@vercel/blob');
 const jwt = require('jsonwebtoken');
@@ -94,6 +95,7 @@ initializeRedisData();
 // --- End Data Initialization ---
 
 app.use(bodyParser.json({ limit: '10mb' }));
+app.use(cookieParser());
 
 const authenticate = async (req, res, next) => {
   const token = req.cookies.session_token;
@@ -144,7 +146,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: process.env.EMAIL_FROM || 'updates@manzone.org',
+        from: `"Linktracking" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
         to: email,
         subject: 'Your Login Link for Linktracking',
         html: `
