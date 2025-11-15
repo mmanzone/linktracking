@@ -8,12 +8,14 @@
 </head>
 <body>
     <div class="admin-container">
-        <h1>Admin Panel</h1>
-        <div id="login">
-            <input type="password" id="password" placeholder="Password">
-            <button id="login-btn">Login</button>
-        </div>
-        <div id="admin-panel" style="display: none;">
+        <header class="admin-header">
+            <h1>Admin Panel</h1>
+            <div class="admin-controls">
+                <select id="tenant-switcher" style="display: none;"></select>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </header>
+        <div id="admin-panel">
             <div class="tabs">
                 <button class="tab-link active" data-tab="general">General</button>
                 <button class="tab-link" data-tab="links">Links</button>

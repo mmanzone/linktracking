@@ -1,45 +1,61 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const loginBtn = document.getElementById('login-btn');
-    const passwordInput = document.getElementById('password');
-    const loginDiv = document.getElementById('login');
     const adminPanelDiv = document.getElementById('admin-panel');
     const adminContentDiv = document.getElementById('admin-content');
-    const tabs = document.querySelectorAll('.tab-link');
+    const tabsContainer = document.querySelector('.tabs');
+    const tenantSwitcher = document.getElementById('tenant-switcher');
+    const logoutBtn = document.getElementById('logout-btn');
 
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            loadAdminContent(tab.dataset.tab);
-        });
-    });
+    let currentUser = null;
 
-    loginBtn.addEventListener('click', () => {
-        const password = passwordInput.value;
-        fetch('/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ password })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                loginDiv.style.display = 'none';
-                adminPanelDiv.style.display = 'block';
-                loadAdminContent('general');
-            } else {
-                alert('Incorrect password');
+    fetch('/api/me')
+        .then(response => {
+            if (!response.ok) {
+                window.location.href = '/login.html';
+                return;
             }
+            return response.json();
+        })
+        .then(user => {
+            currentUser = user;
+            if (user.role === 'master-admin') {
+                const tenantsTab = document.createElement('button');
+                tenantsTab.classList.add('tab-link');
+                tenantsTab.dataset.tab = 'tenants';
+                tenantsTab.textContent = 'Tenants';
+                tabsContainer.appendChild(tenantsTab);
+            }
+            
+            // Re-add event listeners to tabs
+            const tabs = document.querySelectorAll('.tab-link');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    loadAdminContent(tab.dataset.tab);
+                });
+            });
+
+            adminPanelDiv.style.display = 'block';
+            loadAdminContent('general');
         });
+    
+    logoutBtn.addEventListener('click', () => {
+        document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/login.html';
     });
+
 
     function loadAdminContent(tab) {
+        // We need the config for most tabs, but not for the tenants tab
+        if (tab === 'tenants') {
+            renderTenantsTab();
+            return;
+        }
+
         fetch('/api/config')
             .then(response => response.json())
             .then(config => {
-                adminContentDiv.innerHTML = ''; // Clear previous content
+                adminContentDiv.innerHTML = '';
                 switch (tab) {
                     case 'general':
                         renderGeneralTab(config);
@@ -55,6 +71,59 @@ document.addEventListener('DOMContentLoaded', () => {
                         break;
                 }
             });
+    }
+    
+    function renderTenantsTab() {
+        adminContentDiv.innerHTML = `
+            <div id="tenants-tab" class="tab-content active">
+                <h2>Tenant Management</h2>
+                <div id="tenants-list"></div>
+                <h3>Create New Tenant</h3>
+                <form id="create-tenant-form">
+                    <label>Tenant Name (for URL, e.g., 'my-company'): <input type="text" id="tenant-name-input" required></label>
+                    <label>Display Name: <input type="text" id="tenant-display-name-input" required></label>
+                    <label>Admin Email: <input type="email" id="tenant-email-input" required></label>
+                    <button type="submit">Create Tenant</button>
+                </form>
+            </div>
+        `;
+
+        const tenantsList = document.getElementById('tenants-list');
+        fetch('/api/tenants')
+            .then(res => res.json())
+            .then(tenants => {
+                tenants.forEach(tenant => {
+                    const tenantEl = document.createElement('div');
+                    tenantEl.innerHTML = `
+                        <p>${tenant.displayName} (${tenant.name})</p>
+                        <button class="delete-tenant" data-id="${tenant.name}">Delete</button>
+                    `;
+                    tenantsList.appendChild(tenantEl);
+                });
+            });
+        
+        tenantsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-tenant')) {
+                const tenantId = e.target.dataset.id;
+                if (confirm(`Are you sure you want to delete tenant ${tenantId}? This is irreversible.`)) {
+                    fetch(`/api/tenants/${tenantId}`, { method: 'DELETE' })
+                        .then(() => loadAdminContent('tenants'));
+                }
+            }
+        });
+
+        document.getElementById('create-tenant-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('tenant-name-input').value;
+            const displayName = document.getElementById('tenant-display-name-input').value;
+            const email = document.getElementById('tenant-email-input').value;
+            
+            fetch('/api/tenants', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, displayName, email })
+            }).then(() => loadAdminContent('tenants'));
+        });
     }
 
     function renderGeneralTab(config) {

@@ -1,8 +1,12 @@
 {
     "users": [
         {
-            "username": "admin",
-            "password": "password" 
+            "id": "user_1",
+            "email": "matthias@menzone.org",
+            "tenants": [
+                "tenant_1"
+            ],
+            "role": "master-admin"
         }
     ]
 }

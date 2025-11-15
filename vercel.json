@@ -3,6 +3,22 @@
         {
             "source": "/api/(.*)",
             "destination": "/api/index.js"
+        },
+        {
+            "source": "/:tenant",
+            "destination": "/index.html"
+        }
+    ],
+    "redirects": [
+        {
+            "source": "/admin",
+            "destination": "/admin.html",
+            "permanent": false
+        },
+        {
+            "source": "/login",
+            "destination": "/login.html",
+            "permanent": false
         }
     ]
 }
