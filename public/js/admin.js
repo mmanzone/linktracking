@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Email: <input type="email" id="invite-email-input" required></label>
                     <button type="submit">Send Invite</button>
                 </form>
+                <p id="invite-message"></p>
                 ` : ''}
             </div>
         `;
@@ -179,13 +180,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('invite-user-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const email = document.getElementById('invite-email-input').value;
+                const messageEl = document.getElementById('invite-message');
+                messageEl.textContent = 'Sending invite...';
+
                 fetch('/api/users/invite', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
                 }).then(() => {
                     document.getElementById('invite-email-input').value = '';
-                    alert('Invite sent!');
+                    messageEl.textContent = 'Invite sent successfully!';
                     loadAdminContent('users');
                 });
             });
