@@ -44,7 +44,7 @@ header {
 }
 
 #company-name-header {
-    font-size: 2rem;
+    font-size: 1.9rem;
     font-weight: bold;
     margin: 10px 0;
 }
@@ -386,6 +386,7 @@ footer {
     padding: 10px;
     margin-bottom: 20px;
     border-radius: 5px;
+    font-weight: bold;
 }
 
 @media (max-width: 720px) {

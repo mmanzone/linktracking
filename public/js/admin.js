@@ -360,7 +360,13 @@ document.addEventListener('DOMContentLoaded', () => {
             logoWidth: 64,
             logoHeight: 64,
             logoBackgroundColor: '#ffffff',
-            logoBackgroundTransparent: false
+            logoBackgroundTransparent: false,
+            logoImage: (() => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.src = config.logo;
+                return img;
+            })()
         });
 
         // Add Download Buttons
