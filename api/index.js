@@ -25,9 +25,9 @@ const initializeRedisData = async () => {
       users: ['user_1'],
     });
 
-    await redis.set('user:matthias@menzone.org', {
+    await redis.set('user:matthias@manzone.org', {
       id: 'user_1',
-      email: 'matthias@menzone.org',
+      email: 'matthias@manzone.org',
       tenants: ['tenant_1'],
       role: 'master-admin',
     });
