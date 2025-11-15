@@ -3,46 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Linktracking - Simple, Effective Link Management</title>
+    <title id="company-name">Linktracking</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="homepage">
+<body>
     <div class="container">
-        <div id="error-message" style="display: none; color: red; margin-bottom: 20px;"></div>
-        <header class="homepage-header">
-            <h1>Linktracking</h1>
-            <p>Your simple solution for creating, managing, and tracking links for events, campaigns, and communities.</p>
+        <header>
+            <img id="logo" src="" alt="Logo" style="max-width: 150px; max-height: 150px;">
+            <p id="description"></p>
+            <div id="social-links"></div>
         </header>
-        
-        <main class="homepage-main">
-            <section class="features">
-                <h2>Why Linktracking?</h2>
-                <div class="feature">
-                    <h3>Go Paperless</h3>
-                    <p>Replace printed materials with a single, dynamic QR code. Update your links anytime without reprinting anything.</p>
-                </div>
-                <div class="feature">
-                    <h3>Measure Your Impact</h3>
-                    <p>Track every click and visit to understand how your audience engages with your content. Get insights by day, campaign, or time of day.</p>
-                </div>
-                <div class="feature">
-                    <h3>Fully Customizable</h3>
-                    <p>Tailor your landing page to match your brand. Customize colors, logos, and link order to create a seamless experience.</p>
-                </div>
-            </section>
-            
-            <section class="cta">
-                <a href="/login" class="button">Login to your account</a>
-            </section>
+        <main>
+            <div id="campaign-banner-container"></div>
+            <div id="links"></div>
         </main>
     </div>
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('error') === 'not_found') {
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = 'Account not found. Please check the URL and try again.';
-            errorDiv.style.display = 'block';
-        }
-    </script>
+    <script src="/js/app.js"></script>
 </body>
 </html>

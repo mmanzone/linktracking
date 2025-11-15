@@ -408,4 +408,18 @@ app.get('/api/admin/analytics', authenticate, requireMasterAdmin, async (req, re
     }
 });
 
+app.get('/api/users', authenticate, async (req, res) => {
+    const tenant = req.tenant;
+    const userKeys = tenant.users;
+    const users = await Promise.all(userKeys.map(userId => {
+        // This is inefficient. A better data model would store user emails in the tenant.
+        return redis.keys(`user:*`).then(keys => {
+            return Promise.all(keys.map(key => redis.get(key)));
+        }).then(allUsers => {
+            return allUsers.find(u => u.id === userId);
+        });
+    }));
+    res.json(users.filter(Boolean));
+});
+
 module.exports = app;

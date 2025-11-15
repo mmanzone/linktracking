@@ -28,6 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 tenantsTab.dataset.tab = 'tenants';
                 tenantsTab.textContent = 'Tenants';
                 tabsContainer.appendChild(tenantsTab);
+            } else {
+                const usersTab = document.createElement('button');
+                usersTab.classList.add('tab-link');
+                usersTab.dataset.tab = 'users';
+                usersTab.textContent = 'Users';
+                tabsContainer.appendChild(usersTab);
             }
             
             // Re-add event listeners to tabs
@@ -55,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tab === 'tenants') {
             renderTenantsTab();
             return;
+        } else if (tab === 'users') {
+            renderUsersTab();
+            return;
         }
 
         fetch('/api/admin/config')
@@ -74,8 +83,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'analytics':
                         renderAnalyticsTab(config);
                         break;
+                    case 'users':
+                        renderUsersTab();
+                        break;
                 }
             });
+    }
+
+    function renderUsersTab() {
+        adminContentDiv.innerHTML = `
+            <div id="users-tab" class="tab-content active">
+                <h2>User Management</h2>
+                <div id="users-list"></div>
+                <h3>Invite New User</h3>
+                <form id="invite-user-form">
+                    <label>Email: <input type="email" id="invite-email-input" required></label>
+                    <button type="submit">Send Invite</button>
+                </form>
+            </div>
+        `;
+
+        const usersList = document.getElementById('users-list');
+        fetch('/api/users')
+            .then(res => res.json())
+            .then(users => {
+                users.forEach(user => {
+                    const userEl = document.createElement('div');
+                    userEl.textContent = user.email;
+                    usersList.appendChild(userEl);
+                });
+            });
+        
+        // Invite logic to be added here
     }
     
     function renderTenantsTab() {
@@ -114,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         
         tenantsList.addEventListener('click', (e) => {
-            const tenantId = e.target.dataset.id;
+            const tenantId = e.target.closest('.tenant-admin-row').dataset.tenantId;
             if (e.target.classList.contains('delete-tenant')) {
                 if (confirm(`Are you sure you want to delete tenant ${tenantId}? This is irreversible.`)) {
                     fetch(`/api/tenants/${tenantId}`, { method: 'DELETE' })
@@ -623,22 +662,24 @@ document.addEventListener('DOMContentLoaded', () => {
         displayCampaigns(); // Initial display
 
         document.getElementById('add-campaign').addEventListener('click', () => {
-            const newConfig = { ...config };
-            const startDate = new Date();
-            startDate.setHours(0, 0, 0, 0);
-            const endDate = new Date();
-            endDate.setHours(23, 59, 59, 999);
+            fetch('/api/admin/config').then(res => res.json()).then(config => {
+                const newConfig = { ...config };
+                const startDate = new Date();
+                startDate.setHours(0, 0, 0, 0);
+                const endDate = new Date();
+                endDate.setHours(23, 59, 59, 999);
 
-            newConfig.campaigns.push({
-                id: Date.now().toString(),
-                name: 'New Campaign',
-                description: '',
-                message: '',
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
-                links: config.links.map(l => l.id) // Default to all links
+                newConfig.campaigns.push({
+                    id: Date.now().toString(),
+                    name: 'New Campaign',
+                    description: '',
+                    message: '',
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    links: config.links.map(l => l.id) // Default to all links
+                });
+                saveConfig(newConfig).then(() => loadAdminContent('campaigns'));
             });
-            saveConfig(newConfig).then(() => loadAdminContent('campaigns'));
         });
 
         campaignsList.addEventListener('click', (event) => {
