@@ -153,15 +153,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     userEl.dataset.userId = user.id;
                     const isCurrentUser = user.id === currentUser.id;
                     
-                    const isCurrentUser = user.id === currentUser.id;
-                    
                     userEl.innerHTML = `
                         <div class="user-col-email">${user.email}</div>
                         <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
                         <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'} ${user.disabled ? '(Disabled)' : ''}</div>
                         <div class="user-col-actions">
                             <button class="edit-user">Edit</button>
-                            ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                             ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                         </div>
                     `;
