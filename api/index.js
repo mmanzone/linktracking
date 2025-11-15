@@ -18,20 +18,29 @@ const redis = new Redis({
 const initializeRedisData = async () => {
   const masterTenantExists = await redis.exists('tenant:master');
   if (!masterTenantExists) {
+    console.log('Master tenant not found, creating...');
     await redis.set('tenant:master', {
       id: 'tenant_1',
       name: 'master',
       displayName: 'Master Admin',
       users: ['user_1'],
     });
+  }
 
+  const masterUserExists = await redis.exists('user:matthias@manzone.org');
+  if (!masterUserExists) {
+    console.log('Master user not found, creating...');
     await redis.set('user:matthias@manzone.org', {
       id: 'user_1',
       email: 'matthias@manzone.org',
       tenants: ['tenant_1'],
       role: 'master-admin',
     });
-
+  }
+  
+  const masterConfigExists = await redis.exists('config:tenant_1');
+  if(!masterConfigExists) {
+    console.log('Master config not found, creating...');
     await redis.set('config:tenant_1', {
       companyName: 'Your Company',
       logo: '/images/logo.png',
@@ -48,7 +57,11 @@ const initializeRedisData = async () => {
       links: [],
       campaigns: [],
     });
+  }
 
+  const masterAnalyticsExists = await redis.exists('analytics:tenant_1');
+  if (!masterAnalyticsExists) {
+    console.log('Master analytics not found, creating...');
     await redis.set('analytics:tenant_1', {
       visits: [],
       clicks: [],
@@ -98,9 +111,11 @@ const requireMasterAdmin = (req, res, next) => {
 
 app.post('/api/auth/login', async (req, res) => {
   const { email } = req.body;
+  console.log(`Login attempt for email: ${email}`);
   const user = await redis.get(`user:${email}`);
 
   if (user) {
+    console.log(`User found for email: ${email}`);
     const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '15m' });
     // Dynamically generate the magic link URL
     const host = req.headers.host;
@@ -114,12 +129,14 @@ app.post('/api/auth/login', async (req, res) => {
         subject: 'Your Magic Login Link',
         html: `<p>Click <a href="${magicLink}">here</a> to log in.</p>`,
       });
+      console.log(`Magic link sent to: ${email}`);
       res.json({ success: true, message: 'Magic link sent.' });
     } catch (error) {
       console.error('Error sending email:', error); // Log the actual error
       res.status(500).json({ success: false, message: 'Error sending email.' });
     }
   } else {
+    console.log(`User not found for email: ${email}`);
     // To prevent user enumeration, we'll send a success response even if the user doesn't exist.
     // You might want to handle new user registration separately.
     res.json({ success: true, message: 'If your email is registered, a magic link has been sent.' });
