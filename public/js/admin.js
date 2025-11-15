@@ -653,6 +653,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCampaignsTab() {
+        let tenantFilter = '';
+        if (currentUser.role === 'master-admin') {
+            tenantFilter = `
+                <select id="tenant-campaign-filter">
+                    <option value="">All Tenants</option>
+                </select>
+            `;
+        }
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
                 <h2>Campaign Management</h2>
