@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tenantSwitcher = document.getElementById('tenant-switcher');
     const logoutBtn = document.getElementById('logout-btn');
 
+    let currentTenant = null;
     let currentUser = null;
 
     fetch('/api/me')
@@ -15,9 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return response.json();
         })
-        .then(user => {
-            currentUser = user;
-            if (user.role === 'master-admin') {
+        .then(data => {
+            currentUser = data.user;
+            currentTenant = data.tenant;
+            
+            if (currentUser.role === 'master-admin') {
                 const tenantsTab = document.createElement('button');
                 tenantsTab.classList.add('tab-link');
                 tenantsTab.dataset.tab = 'tenants';
@@ -94,9 +97,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(tenants => {
                 tenants.forEach(tenant => {
                     const tenantEl = document.createElement('div');
+                    tenantEl.classList.add('tenant-admin-row');
                     tenantEl.innerHTML = `
-                        <p>${tenant.displayName} (${tenant.name})</p>
-                        <button class="delete-tenant" data-id="${tenant.name}">Delete</button>
+                        <span>${tenant.displayName} (${tenant.name})</span>
+                        <div>
+                            <button class="edit-tenant" data-id="${tenant.name}">Edit</button>
+                            <button class="delete-tenant" data-id="${tenant.name}">Delete</button>
+                        </div>
                     `;
                     tenantsList.appendChild(tenantEl);
                 });
@@ -110,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         .then(() => loadAdminContent('tenants'));
                 }
             }
+            // Add edit functionality here later
         });
 
         document.getElementById('create-tenant-form').addEventListener('submit', (e) => {
@@ -183,8 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         // QR Code Generation
+        const tenantUrl = `${window.location.origin}/${currentTenant.name}`;
         new QRCode(document.getElementById("qrcode-standard"), {
-            text: window.location.origin,
+            text: tenantUrl,
             width: 128,
             height: 128,
             colorDark : config.theme.primaryColor,
@@ -193,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         new QRCode(document.getElementById("qrcode-logo"), {
-            text: window.location.origin,
+            text: tenantUrl,
             width: 128,
             height: 128,
             colorDark : config.theme.primaryColor,
@@ -744,6 +753,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderAnalyticsTab(config) {
+        let tenantFilter = '';
+        if (currentUser.role === 'master-admin') {
+            tenantFilter = `
+                <select id="tenant-analytics-filter">
+                    <option value="">All Tenants</option>
+                </select>
+            `;
+        }
+
         adminContentDiv.innerHTML = `
             <div id="analytics-tab" class="tab-content active">
                 <h2>Analytics</h2>
@@ -753,6 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     The visitors by hour show the time of the day the visitor opened the page, cumulative over the days in the time period. This highlights the busier engagement period during a campaign for example.
                 </p>
                 <div id="analytics-filters" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                    ${tenantFilter}
                     <select id="date-filter">
                         <option value="30">Last 30 days</option>
                         <option value="7">Last 7 days</option>
@@ -781,6 +800,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <small>All times are in Australia/Sydney timezone.</small>
             </div>
         `;
+        
+        if (currentUser.role === 'master-admin') {
+            const tenantAnalyticsFilter = document.getElementById('tenant-analytics-filter');
+            fetch('/api/tenants')
+                .then(res => res.json())
+                .then(tenants => {
+                    tenants.forEach(tenant => {
+                        tenantAnalyticsFilter.innerHTML += `<option value="${tenant.id}">${tenant.displayName}</option>`;
+                    });
+                });
+        }
+
 
         document.getElementById('export-analytics').addEventListener('click', () => {
             const chartsContainer = document.getElementById('analytics-charts');
@@ -798,12 +829,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const refreshButton = document.getElementById('refresh-analytics');
 
         refreshButton.addEventListener('click', () => {
-            fetch('/api/analytics')
+            fetchAnalyticsData();
+        });
+        
+        const fetchAnalyticsData = () => {
+            let url = '/api/analytics';
+            if (currentUser.role === 'master-admin') {
+                const tenantId = document.getElementById('tenant-analytics-filter').value;
+                url = `/api/admin/analytics?tenantId=${tenantId}`;
+            }
+            
+            fetch(url)
                 .then(response => response.json())
                 .then(analytics => {
-                    filterAnalyticsData(analytics);
+                    let processedAnalytics = analytics;
+                    if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
+                        // Aggregate data from all tenants
+                        processedAnalytics = Object.values(analytics).reduce((acc, tenantAnalytics) => {
+                            if (tenantAnalytics) {
+                                acc.visits.push(...tenantAnalytics.visits);
+                                acc.clicks.push(...tenantAnalytics.clicks);
+                            }
+                            return acc;
+                        }, { visits: [], clicks: [] });
+                    }
+                    filterAnalyticsData(processedAnalytics);
                 });
-        });
+        };
 
         const getSydneyHour = (utcIsoString) => {
             const date = new Date(utcIsoString);
@@ -1025,15 +1077,14 @@ document.addEventListener('DOMContentLoaded', () => {
             updateAnalyticsCharts(filteredAnalytics);
         };
 
-        fetch('/api/analytics')
-            .then(response => response.json())
-            .then(analytics => {
-                const filterAndRender = () => filterAnalyticsData(analytics);
-                dateFilter.addEventListener('change', filterAndRender);
-                campaignFilter.addEventListener('change', filterAndRender);
-                cumulativeCheckbox.addEventListener('change', filterAndRender);
-                filterAndRender(); // Initial load
-            });
+        const filterAndRender = () => fetchAnalyticsData();
+        dateFilter.addEventListener('change', filterAndRender);
+        campaignFilter.addEventListener('change', filterAndRender);
+        cumulativeCheckbox.addEventListener('change', filterAndRender);
+        if (currentUser.role === 'master-admin') {
+            document.getElementById('tenant-analytics-filter').addEventListener('change', filterAndRender);
+        }
+        filterAndRender(); // Initial load
     }
 
     function showSaveConfirmation(button) {

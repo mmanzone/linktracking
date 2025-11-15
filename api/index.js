@@ -113,7 +113,10 @@ const authenticate = async (req, res, next) => {
     req.user = user;
     // For now, let's assume the user is operating on their first tenant.
     // A proper implementation would have a tenant switcher on the frontend.
-    req.tenantId = user.tenants[0]; 
+    req.tenantId = user.tenants[0];
+    const tenant = await redis.get(`tenant:${req.tenantId}`);
+    req.tenant = tenant;
+
     next();
   } catch (error) {
     return res.status(401).send('Invalid or expired token.');
@@ -121,7 +124,7 @@ const authenticate = async (req, res, next) => {
 };
 
 app.get('/api/me', authenticate, (req, res) => {
-    res.json(req.user);
+    res.json({ user: req.user, tenant: req.tenant });
 });
 
 const requireMasterAdmin = (req, res, next) => {
@@ -208,7 +211,28 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
         role: 'user', // Or 'admin' if you have tenant-level admins
     });
     
-    // You might want to create a default config and analytics record here too
+    // Create default config and analytics for the new tenant
+    await redis.set(`config:${tenantId}`, {
+        companyName: displayName || name,
+        logo: '/images/logo.png',
+        description: 'Welcome to your page!',
+        theme: { 
+            primaryColor: '#007bff', 
+            secondaryColor: '#6c757d',
+            primaryTextColor: '#ffffff',
+            secondaryTextColor: '#ffffff',
+            backgroundColor: '#f0f2f5',
+            containerColor: '#ffffff'
+        },
+        socialLinks: [],
+        links: [],
+        campaigns: [],
+    });
+
+    await redis.set(`analytics:${tenantId}`, {
+        visits: [],
+        clicks: [],
+    });
     
     res.json({ success: true });
 });
@@ -316,6 +340,24 @@ app.get('/api/analytics', authenticate, async (req, res) => {
   const { tenantId } = req;
   const analytics = await redis.get(`analytics:${tenantId}`);
   res.json(analytics);
+});
+
+app.get('/api/admin/analytics', authenticate, requireMasterAdmin, async (req, res) => {
+    const { tenantId } = req.query;
+    if (tenantId) {
+        // Fetch for a specific tenant
+        const analytics = await redis.get(`analytics:${tenantId}`);
+        return res.json(analytics);
+    } else {
+        // Fetch for all tenants
+        const tenantKeys = await redis.keys('tenant:*');
+        const tenants = await Promise.all(tenantKeys.map(key => redis.get(key)));
+        const allAnalytics = {};
+        for (const tenant of tenants) {
+            allAnalytics[tenant.id] = await redis.get(`analytics:${tenant.id}`);
+        }
+        return res.json(allAnalytics);
+    }
 });
 
 module.exports = app;
