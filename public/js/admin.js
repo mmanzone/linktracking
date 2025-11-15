@@ -845,6 +845,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
                             </div>
                             <h4>Links</h4>
+                            <div class="campaign-links-header">
+                                <div class="link-order-header">Move</div>
+                                <div class="link-display-header">Display/Hide</div>
+                                <div class="link-name-header">Link</div>
+                            </div>
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
                             <div class="button-container">
                                 <button class="save-edit-campaign">Save</button>
