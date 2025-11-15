@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentTenant = data.tenant;
             
             document.getElementById('admin-title').textContent = `${currentTenant.displayName} - Admin Panel`;
+            document.getElementById('logout-btn').textContent = `Logout ${currentUser.firstName || ''} ${currentUser.lastName || ''}`;
             
             if (currentUser.role === 'master-admin') {
                 const tenantsTab = document.createElement('button');
@@ -119,15 +120,24 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(userApiUrl)
             .then(res => res.json())
             .then(users => {
+                // Move current user to the top
+                const currentUserIndex = users.findIndex(u => u.id === currentUser.id);
+                if (currentUserIndex > -1) {
+                    const [currentUserData] = users.splice(currentUserIndex, 1);
+                    users.unshift(currentUserData);
+                }
+
                 users.forEach(user => {
                     const userEl = document.createElement('div');
                     userEl.classList.add('user-admin-row');
                     userEl.dataset.userId = user.id;
+                    const isCurrentUser = user.id === currentUser.id;
+                    
                     userEl.innerHTML = `
                         <span>${user.firstName || ''} ${user.lastName || ''} (${user.email}) - Last Login: ${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'} ${user.disabled ? '(Disabled)' : ''}</span>
                         <div>
-                            <button class="edit-user">Edit</button>
-                            <button class="delete-user">Delete</button>
+                            <button class="edit-user" ${isCurrentUser ? 'disabled' : ''}>Edit</button>
+                            ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                         </div>
                     `;
                     usersList.appendChild(userEl);
@@ -877,7 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
                             <div class="button-container">
                                 <button class="save-edit-campaign">Save</button>
-                                <button class="cancel-edit-campaign">Cancel</button>
+                                <button class="cancel-edit">Cancel</button>
                             </div>
                         </div>
                     `;
