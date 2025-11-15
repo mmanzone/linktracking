@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.style.setProperty('--secondary-text-color', config.theme.secondaryTextColor || getContrastYIQ(config.theme.secondaryColor));
 
             document.getElementById('company-name-header').textContent = config.companyName;
+            document.title = config.companyName;
             document.getElementById('logo').src = config.logo;
             document.getElementById('description').textContent = config.description;
 
