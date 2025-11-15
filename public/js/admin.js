@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = data.user;
             currentTenant = data.tenant;
             
-            document.getElementById('admin-title').textContent = `${currentTenant.displayName} Admin`;
-
+            document.getElementById('admin-title').textContent = `${currentTenant.displayName} - Admin Panel`;
+            
             if (currentUser.role === 'master-admin') {
                 const tenantsTab = document.createElement('button');
                 tenantsTab.classList.add('tab-link');
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tenants.forEach(tenant => {
                     const tenantEl = document.createElement('div');
                     tenantEl.classList.add('tenant-admin-row');
-                    tenantEl.dataset.id = tenant.name;
+                    tenantEl.dataset.tenantId = tenant.name;
                     tenantEl.innerHTML = `
                         <span>${tenant.displayName} (${tenant.name})</span>
                         <div>
@@ -115,39 +115,36 @@ document.addEventListener('DOMContentLoaded', () => {
         
         tenantsList.addEventListener('click', (e) => {
             const tenantId = e.target.dataset.id;
-            if (!tenantId) return;
-
             if (e.target.classList.contains('delete-tenant')) {
                 if (confirm(`Are you sure you want to delete tenant ${tenantId}? This is irreversible.`)) {
                     fetch(`/api/tenants/${tenantId}`, { method: 'DELETE' })
                         .then(() => loadAdminContent('tenants'));
                 }
             }
-
             if (e.target.classList.contains('edit-tenant')) {
                 const row = e.target.closest('.tenant-admin-row');
                 const span = row.querySelector('span');
-                const currentDisplayName = span.textContent.split(' (')[0];
+                const originalText = span.textContent;
+                const tenant = {
+                    displayName: originalText.substring(0, originalText.lastIndexOf('(') - 1),
+                    name: tenantId
+                };
                 
                 row.innerHTML = `
-                    <input type="text" class="edit-displayName" value="${currentDisplayName}">
-                    <div>
-                        <button class="save-tenant" data-id="${tenantId}">Save</button>
-                        <button class="cancel-edit" data-id="${tenantId}">Cancel</button>
-                    </div>
+                    <input type="text" class="edit-displayName" value="${tenant.displayName}">
+                    <button class="save-tenant" data-id="${tenant.name}">Save</button>
+                    <button class="cancel-edit">Cancel</button>
                 `;
             }
-
             if (e.target.classList.contains('save-tenant')) {
                 const row = e.target.closest('.tenant-admin-row');
-                const newDisplayName = row.querySelector('.edit-displayName').value;
+                const displayName = row.querySelector('.edit-displayName').value;
                 fetch(`/api/tenants/${tenantId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ displayName: newDisplayName })
+                    body: JSON.stringify({ displayName })
                 }).then(() => loadAdminContent('tenants'));
             }
-            
             if (e.target.classList.contains('cancel-edit')) {
                 loadAdminContent('tenants');
             }
@@ -531,7 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </select>
             `;
         }
-
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
                 <h2>Campaign Management</h2>
@@ -572,8 +568,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const campaignsList = document.getElementById('campaigns-list');
         const campaignDateFilter = document.getElementById('campaign-date-filter');
+        
+        const fetchCampaigns = () => {
+            let url = '/api/config'; // Regular users get their own config
+            if (currentUser.role === 'master-admin') {
+                const tenantId = document.getElementById('tenant-campaign-filter')?.value;
+                if (tenantId) {
+                    // This is a bit of a hack. We'd ideally have a dedicated endpoint.
+                    // We can't get another tenant's config directly for security reasons.
+                    // For now, master admin will only see their own campaigns.
+                }
+            }
+            fetch(url)
+                .then(res => res.json())
+                .then(config => displayCampaigns(config.campaigns));
+        };
 
-        const displayCampaigns = () => {
+        const displayCampaigns = (campaigns) => {
             campaignsList.innerHTML = '';
             const filterValue = campaignDateFilter.value;
             const now = new Date();
@@ -584,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 startDate = new Date(0);
             }
 
-            config.campaigns
+            campaigns
                 .filter(c => {
                     const campaignStartDate = new Date(c.startDate);
                     return campaignStartDate >= startDate || campaignStartDate > now;

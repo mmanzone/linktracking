@@ -256,7 +256,7 @@ h2 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    width: 100%;
 }
 
 .admin-controls {
@@ -265,7 +265,7 @@ h2 {
 }
 
 #logout-btn {
-    position: absolute;
+    position: fixed;
     bottom: 20px;
     right: 20px;
 }
@@ -281,8 +281,30 @@ h2 {
 /* Homepage Styles */
 .homepage {
     background-color: #f0f2f5;
-    color: #333;
-    font-family: Arial, sans-serif;
+}
+
+.homepage-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.features {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.feature {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 30%;
+}
+
+.cta {
+    text-align: center;
 }
 
 .hero {

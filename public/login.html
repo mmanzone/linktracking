@@ -7,14 +7,19 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="homepage">
-    <div class="hero">
-        <h1>Welcome Back</h1>
-        <p>Enter your email address to receive a magic link and access your account. If you don't have an account yet, you'll be guided through the simple setup process.</p>
-        <form id="login-form" style="margin-top: 40px;">
-            <input type="email" id="email" placeholder="Enter your email" required style="padding: 15px; font-size: 1.1em; border-radius: 5px; border: 1px solid #ccc; width: 300px;">
-            <button type="submit" class="cta-button" style="margin-left: 10px;">Send Magic Link</button>
-        </form>
-        <p id="message" style="margin-top: 20px;"></p>
+    <div class="container">
+        <header class="homepage-header">
+            <h1>Log in to your account</h1>
+            <p>Enter your email address below to receive a magic link to sign in. If you don't have an account yet, one will be created for you if you've been invited to a team.</p>
+        </header>
+        
+        <main class="homepage-main">
+            <form id="login-form">
+                <input type="email" id="email" placeholder="Enter your email" required>
+                <button type="submit" class="button">Send Magic Link</button>
+            </form>
+            <p id="message"></p>
+        </main>
     </div>
     <script src="js/login.js"></script>
 </body>

@@ -3,29 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Linktracking</title>
+    <title>Linktracking - Simple, Effective Link Management</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="homepage">
-    <div class="hero">
-        <h1>Measure Your Impact, Simply.</h1>
-        <p>Create beautiful, trackable landing pages for your events and campaigns. No more guessing—see exactly how your audience engages with your content.</p>
-        <a href="/login" class="cta-button">Get Started</a>
+    <div class="container">
+        <div id="error-message" style="display: none; color: red; margin-bottom: 20px;"></div>
+        <header class="homepage-header">
+            <h1>Linktracking</h1>
+            <p>Your simple solution for creating, managing, and tracking links for events, campaigns, and communities.</p>
+        </header>
+        
+        <main class="homepage-main">
+            <section class="features">
+                <h2>Why Linktracking?</h2>
+                <div class="feature">
+                    <h3>Go Paperless</h3>
+                    <p>Replace printed materials with a single, dynamic QR code. Update your links anytime without reprinting anything.</p>
+                </div>
+                <div class="feature">
+                    <h3>Measure Your Impact</h3>
+                    <p>Track every click and visit to understand how your audience engages with your content. Get insights by day, campaign, or time of day.</p>
+                </div>
+                <div class="feature">
+                    <h3>Fully Customizable</h3>
+                    <p>Tailor your landing page to match your brand. Customize colors, logos, and link order to create a seamless experience.</p>
+                </div>
+            </section>
+            
+            <section class="cta">
+                <a href="/login" class="button">Login to your account</a>
+            </section>
+        </main>
     </div>
-
-    <div class="features">
-        <div class="feature">
-            <h2>Custom Branding</h2>
-            <p>Customize your page with your own logo, colors, and branding to create a seamless experience for your audience.</p>
-        </div>
-        <div class="feature">
-            <h2>Powerful Analytics</h2>
-            <p>Go beyond simple click counts. Understand your audience with detailed analytics on visits, link clicks, and engagement over time.</p>
-        </div>
-        <div class="feature">
-            <h2>Campaign Mode</h2>
-            <p>Run targeted campaigns for specific events. Schedule unique landing pages with their own set of links and messaging.</p>
-        </div>
-    </div>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('error') === 'not_found') {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = 'Account not found. Please check the URL and try again.';
+            errorDiv.style.display = 'block';
+        }
+    </script>
 </body>
 </html>

@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch(`/api/config?tenant=${tenant}`)
         .then(response => {
             if (!response.ok) {
+                window.location.href = '/?error=not_found';
                 throw new Error('Tenant not found');
             }
             return response.json();
