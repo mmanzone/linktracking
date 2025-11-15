@@ -261,8 +261,11 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     
     if (sendWelcomeEmail) {
         try {
+            const host = req.headers.host;
+            const protocol = host.includes('localhost') ? 'http' : 'https';
+            const baseUrl = process.env.BASE_URL || `${protocol}://${host}`;
             await resend.emails.send({
-                from: `"linkreach.xyz" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                from: `"LinkReach Welcome" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
                 subject: `Welcome to linkreach.xyz, ${displayName}!`,
                 html: `
@@ -270,9 +273,9 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
   <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
   <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
-  <p>Your public landing page is available at: <a href="${process.env.BASE_URL}/${name}">${process.env.BASE_URL}/${name}</a></p>
+  <p>Your public landing page is available at: <a href="${baseUrl}/${name}">${baseUrl}/${name}</a></p>
   <p style="margin: 20px 0;">
-    <a href="${process.env.BASE_URL}/login" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
+    <a href="${baseUrl}/login" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
   <p>Thanks,<br>The linkreach.xyz Team</p>
 </div>
@@ -473,8 +476,11 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
 
     // Send invite email
     try {
+        const host = req.headers.host;
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const baseUrl = process.env.BASE_URL || `${protocol}://${host}`;
         await resend.emails.send({
-            from: `"linkreach.xyz" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+            from: `"LinkReach Welcome" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
             to: email,
             subject: `You've been invited to ${tenant.displayName} on linkreach.xyz`,
             html: `
@@ -482,7 +488,7 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
   <h2>You've been invited!</h2>
   <p>You have been invited to join the "${tenant.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
   <p style="margin: 20px 0;">
-    <a href="${process.env.BASE_URL}/login" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
+    <a href="${baseUrl}/login" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
   <p>Thanks,<br>The linkreach.xyz Team</p>
 </div>
