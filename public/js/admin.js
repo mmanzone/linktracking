@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        fetch('/api/config')
+        fetch('/api/admin/config')
             .then(response => response.json())
             .then(config => {
                 adminContentDiv.innerHTML = '';

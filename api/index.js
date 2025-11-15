@@ -192,47 +192,73 @@ app.post('/api/upload', authenticate, async (req, res) => {
     res.json({ url: blob.url });
 });
 
+app.get('/api/admin/config', authenticate, async (req, res) => {
+    const config = await redis.get(`config:${req.tenantId}`);
+    res.json(config);
+});
+
 app.get('/api/config', async (req, res) => {
   const { tenant } = req.query;
-  const config = await redis.get(`config:${tenant}`);
+  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
+
+  const tenantData = await redis.get(`tenant:${tenant}`);
+  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+  
+  const config = await redis.get(`config:${tenantData.id}`);
+  if (!config) return res.status(404).json({ error: 'Configuration not found for tenant.' });
+
   res.json(config);
 });
 
 app.post('/api/visit', async (req, res) => {
   const { tenant } = req.query;
-  const analytics = await redis.get(`analytics:${tenant}`);
+  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
+
+  const tenantData = await redis.get(`tenant:${tenant}`);
+  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+
+  const analytics = await redis.get(`analytics:${tenantData.id}`);
+  if (!analytics) return res.sendStatus(200);
+
   analytics.visits.push({
     timestamp: new Date().toISOString(),
     ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
     userAgent: req.headers['user-agent'],
   });
-  await redis.set(`analytics:${tenant}`, analytics);
+  await redis.set(`analytics:${tenantData.id}`, analytics);
   res.sendStatus(200);
 });
 
 app.post('/api/click', async (req, res) => {
   const { tenant } = req.query;
+  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
+  
+  const tenantData = await redis.get(`tenant:${tenant}`);
+  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+
   const { linkId } = req.body;
-  const analytics = await redis.get(`analytics:${tenant}`);
+  const analytics = await redis.get(`analytics:${tenantData.id}`);
+  if (!analytics) return res.sendStatus(200);
+
   analytics.clicks.push({
     timestamp: new Date().toISOString(),
     linkId,
     ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
     userAgent: req.headers['user-agent'],
   });
-  await redis.set(`analytics:${tenant}`, analytics);
+  await redis.set(`analytics:${tenantData.id}`, analytics);
   res.sendStatus(200);
 });
 
 app.post('/api/config', authenticate, async (req, res) => {
-  const { tenantId } = req.user;
+  const { tenantId } = req;
   const newConfig = req.body;
   await redis.set(`config:${tenantId}`, newConfig);
   res.sendStatus(200);
 });
 
 app.get('/api/analytics', authenticate, async (req, res) => {
-  const { tenantId } = req.user;
+  const { tenantId } = req;
   const analytics = await redis.get(`analytics:${tenantId}`);
   res.json(analytics);
 });
