@@ -16,12 +16,15 @@ body {
     width: 100%;
     padding: 20px;
     box-sizing: border-box;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Header Styles */
 header {
     text-align: center;
-    padding: 20px 0;
+    padding: 20px;
     margin: -20px -20px 20px -20px;
     border-radius: 16px 16px 0 0;
 }
@@ -104,6 +107,8 @@ header {
 .admin-container {
     width: 100%;
     max-width: 960px;
+    position: relative;
+    padding-bottom: 60px; /* Space for the logout button */
 }
 
 .tabs {
@@ -247,45 +252,78 @@ h2 {
     text-align: right;
 }
 
-.container {
-    max-width: 680px;
-    width: 100%;
-    padding: 20px;
-    box-sizing: border-box;
-    background-color: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-header {
-    text-align: center;
-    padding: 20px;
-    margin: -20px -20px 20px -20px;
-    border-radius: 16px 16px 0 0;
-}
-
-.campaign-message {
-    text-align: center;
-    padding: 10px;
-    margin-top: 15px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    background-color: var(--container-color, #ffffff);
-    color: var(--container-text-color, #1c1e21);
-    border: 1px solid #ddd;
-    font-size: 1.1rem;
-}
-
-.link span {
-    font-weight: 600;
-}
-
-.campaign-link-row {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
+.admin-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    padding: 5px 0;
+    margin-bottom: 20px;
+}
+
+.admin-controls {
+    display: flex;
+    gap: 15px;
+}
+
+#logout-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+}
+
+.tenant-admin-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Homepage Styles */
+.homepage {
+    background-color: #f0f2f5;
+    color: #333;
+    font-family: Arial, sans-serif;
+}
+
+.hero {
+    text-align: center;
+    padding: 100px 20px;
+    background-color: #fff;
+}
+
+.hero h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+}
+
+.hero p {
+    font-size: 1.2em;
+    margin-bottom: 40px;
+    color: #666;
+}
+
+.cta-button {
+    background-color: #007bff;
+    color: #fff;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 1.1em;
+}
+
+.features {
+    display: flex;
+    justify-content: space-around;
+    padding: 60px 20px;
+}
+
+.feature {
+    text-align: center;
+    max-width: 300px;
+}
+
+.feature h2 {
+    margin-bottom: 10px;
 }
 
 footer {

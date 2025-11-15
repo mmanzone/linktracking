@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = data.user;
             currentTenant = data.tenant;
             
+            document.getElementById('admin-title').textContent = `${currentTenant.displayName} Admin`;
+
             if (currentUser.role === 'master-admin') {
                 const tenantsTab = document.createElement('button');
                 tenantsTab.classList.add('tab-link');
@@ -86,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Tenant Name (for URL, e.g., 'my-company'): <input type="text" id="tenant-name-input" required></label>
                     <label>Display Name: <input type="text" id="tenant-display-name-input" required></label>
                     <label>Admin Email: <input type="email" id="tenant-email-input" required></label>
+                    <label><input type="checkbox" id="send-welcome-email-checkbox" checked> Send welcome email</label>
                     <button type="submit">Create Tenant</button>
                 </form>
             </div>
@@ -98,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tenants.forEach(tenant => {
                     const tenantEl = document.createElement('div');
                     tenantEl.classList.add('tenant-admin-row');
+                    tenantEl.dataset.id = tenant.name;
                     tenantEl.innerHTML = `
                         <span>${tenant.displayName} (${tenant.name})</span>
                         <div>
@@ -110,14 +114,43 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         
         tenantsList.addEventListener('click', (e) => {
+            const tenantId = e.target.dataset.id;
+            if (!tenantId) return;
+
             if (e.target.classList.contains('delete-tenant')) {
-                const tenantId = e.target.dataset.id;
                 if (confirm(`Are you sure you want to delete tenant ${tenantId}? This is irreversible.`)) {
                     fetch(`/api/tenants/${tenantId}`, { method: 'DELETE' })
                         .then(() => loadAdminContent('tenants'));
                 }
             }
-            // Add edit functionality here later
+
+            if (e.target.classList.contains('edit-tenant')) {
+                const row = e.target.closest('.tenant-admin-row');
+                const span = row.querySelector('span');
+                const currentDisplayName = span.textContent.split(' (')[0];
+                
+                row.innerHTML = `
+                    <input type="text" class="edit-displayName" value="${currentDisplayName}">
+                    <div>
+                        <button class="save-tenant" data-id="${tenantId}">Save</button>
+                        <button class="cancel-edit" data-id="${tenantId}">Cancel</button>
+                    </div>
+                `;
+            }
+
+            if (e.target.classList.contains('save-tenant')) {
+                const row = e.target.closest('.tenant-admin-row');
+                const newDisplayName = row.querySelector('.edit-displayName').value;
+                fetch(`/api/tenants/${tenantId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ displayName: newDisplayName })
+                }).then(() => loadAdminContent('tenants'));
+            }
+            
+            if (e.target.classList.contains('cancel-edit')) {
+                loadAdminContent('tenants');
+            }
         });
 
         document.getElementById('create-tenant-form').addEventListener('submit', (e) => {
@@ -125,11 +158,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('tenant-name-input').value;
             const displayName = document.getElementById('tenant-display-name-input').value;
             const email = document.getElementById('tenant-email-input').value;
+            const sendWelcomeEmail = document.getElementById('send-welcome-email-checkbox').checked;
             
             fetch('/api/tenants', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, displayName, email })
+                body: JSON.stringify({ name, displayName, email, sendWelcomeEmail })
             }).then(() => loadAdminContent('tenants'));
         });
     }
@@ -489,6 +523,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCampaignsTab(config) {
+        let tenantFilter = '';
+        if (currentUser.role === 'master-admin') {
+            tenantFilter = `
+                <select id="tenant-campaign-filter">
+                    <option value="">All Tenants</option>
+                </select>
+            `;
+        }
+
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
                 <h2>Campaign Management</h2>
@@ -499,6 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     You can see the results of the campaign in this menu, or in the Analytics page, using the Campaign filter.
                 </p>
                 <div id="campaign-filters">
+                    ${tenantFilter}
                     <label>Show campaigns started in the last: 
                         <select id="campaign-date-filter">
                             <option value="180">6 months</option>
@@ -513,6 +557,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button id="add-campaign">Add New Campaign</button>
             </div>
         `;
+
+        if (currentUser.role === 'master-admin') {
+            const tenantCampaignFilter = document.getElementById('tenant-campaign-filter');
+            fetch('/api/tenants')
+                .then(res => res.json())
+                .then(tenants => {
+                    tenants.forEach(tenant => {
+                        tenantCampaignFilter.innerHTML += `<option value="${tenant.id}">${tenant.displayName}</option>`;
+                    });
+                });
+            tenantCampaignFilter.addEventListener('change', displayCampaigns);
+        }
 
         const campaignsList = document.getElementById('campaigns-list');
         const campaignDateFilter = document.getElementById('campaign-date-filter');

@@ -9,10 +9,9 @@
 <body>
     <div class="admin-container">
         <header class="admin-header">
-            <h1>Admin Panel</h1>
+            <h1 id="admin-title">Admin Panel</h1>
             <div class="admin-controls">
                 <select id="tenant-switcher" style="display: none;"></select>
-                <button id="logout-btn">Logout</button>
             </div>
         </header>
         <div id="admin-panel">
@@ -26,6 +25,7 @@
                 <!-- Admin content will be dynamically loaded here -->
             </div>
         </div>
+        <button id="logout-btn">Logout</button>
     </div>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.4.13/dist/easy.qrcode.min.js"></script>

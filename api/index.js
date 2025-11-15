@@ -112,9 +112,21 @@ const authenticate = async (req, res, next) => {
     }
     req.user = user;
     // For now, let's assume the user is operating on their first tenant.
-    // A proper implementation would have a tenant switcher on the frontend.
-    req.tenantId = user.tenants[0];
-    const tenant = await redis.get(`tenant:${req.tenantId}`);
+    const tenantId = user.tenants[0];
+    req.tenantId = tenantId;
+    
+    // To get the tenant's name, we need to find the tenant record
+    // that has this ID. This is inefficient and will be slow with many tenants.
+    // A better data model would be needed for a large-scale app.
+    const tenantKeys = await redis.keys('tenant:*');
+    let tenant = null;
+    for (const key of tenantKeys) {
+        const t = await redis.get(key);
+        if (t.id === tenantId) {
+            tenant = t;
+            break;
+        }
+    }
     req.tenant = tenant;
 
     next();
@@ -193,7 +205,7 @@ app.get('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
 });
 
 app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
-    const { name, displayName, email } = req.body;
+    const { name, displayName, email, sendWelcomeEmail } = req.body;
     const tenantId = `tenant_${Date.now()}`;
     const userId = `user_${Date.now()}`;
 
@@ -234,6 +246,42 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
         clicks: [],
     });
     
+    if (sendWelcomeEmail) {
+        try {
+            await resend.emails.send({
+                from: `"Linktracking" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                to: email,
+                subject: `Welcome to Linktracking, ${displayName}!`,
+                html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6;">
+  <h2>Your Linktracking account is ready!</h2>
+  <p>Hello,</p>
+  <p>An account has been created for you on Linktracking for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
+  <p>Your public landing page is available at: <a href="${process.env.BASE_URL}/${name}">${process.env.BASE_URL}/${name}</a></p>
+  <p style="margin: 20px 0;">
+    <a href="${process.env.BASE_URL}/login" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
+  </p>
+  <p>Thanks,<br>The Linktracking Team</p>
+</div>
+`,
+            });
+        } catch (error) {
+            console.error('Error sending welcome email:', error);
+            // We don't want to fail the whole request if the email fails
+        }
+    }
+    
+    res.json({ success: true });
+});
+
+app.put('/api/tenants/:id', authenticate, requireMasterAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { displayName } = req.body;
+    const tenant = await redis.get(`tenant:${id}`);
+    if (tenant) {
+        tenant.displayName = displayName;
+        await redis.set(`tenant:${id}`, tenant);
+    }
     res.json({ success: true });
 });
 
