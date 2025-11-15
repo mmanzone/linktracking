@@ -13,59 +13,79 @@ const redis = new Redis({
   url: process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
 });
+console.log('Redis client initialized.');
 
 // --- Data Initialization ---
 const initializeRedisData = async () => {
-  const masterTenantExists = await redis.exists('tenant:master');
-  if (!masterTenantExists) {
-    console.log('Master tenant not found, creating...');
-    await redis.set('tenant:master', {
-      id: 'tenant_1',
-      name: 'master',
-      displayName: 'Master Admin',
-      users: ['user_1'],
-    });
-  }
+  try {
+    console.log('Running data initialization...');
 
-  const masterUserExists = await redis.exists('user:matthias@manzone.org');
-  if (!masterUserExists) {
-    console.log('Master user not found, creating...');
-    await redis.set('user:matthias@manzone.org', {
-      id: 'user_1',
-      email: 'matthias@manzone.org',
-      tenants: ['tenant_1'],
-      role: 'master-admin',
-    });
-  }
-  
-  const masterConfigExists = await redis.exists('config:tenant_1');
-  if(!masterConfigExists) {
-    console.log('Master config not found, creating...');
-    await redis.set('config:tenant_1', {
-      companyName: 'Your Company',
-      logo: '/images/logo.png',
-      description: 'Welcome to our page!',
-      theme: { 
-        primaryColor: '#007bff', 
-        secondaryColor: '#6c757d',
-        primaryTextColor: '#ffffff',
-        secondaryTextColor: '#ffffff',
-        backgroundColor: '#f0f2f5',
-        containerColor: '#ffffff'
-      },
-      socialLinks: [],
-      links: [],
-      campaigns: [],
-    });
-  }
+    const masterTenantExists = await redis.exists('tenant:master');
+    if (!masterTenantExists) {
+      console.log('Master tenant not found, creating...');
+      await redis.set('tenant:master', {
+        id: 'tenant_1',
+        name: 'master',
+        displayName: 'Master Admin',
+        users: ['user_1'],
+      });
+      console.log('Master tenant created.');
+    } else {
+      console.log('Master tenant already exists.');
+    }
 
-  const masterAnalyticsExists = await redis.exists('analytics:tenant_1');
-  if (!masterAnalyticsExists) {
-    console.log('Master analytics not found, creating...');
-    await redis.set('analytics:tenant_1', {
-      visits: [],
-      clicks: [],
-    });
+    const masterUserExists = await redis.exists('user:matthias@manzone.org');
+    if (!masterUserExists) {
+      console.log('Master user not found, creating...');
+      await redis.set('user:matthias@manzone.org', {
+        id: 'user_1',
+        email: 'matthias@manzone.org',
+        tenants: ['tenant_1'],
+        role: 'master-admin',
+      });
+      console.log('Master user created.');
+    } else {
+      console.log('Master user already exists.');
+    }
+    
+    const masterConfigExists = await redis.exists('config:tenant_1');
+    if(!masterConfigExists) {
+      console.log('Master config not found, creating...');
+      await redis.set('config:tenant_1', {
+        companyName: 'Your Company',
+        logo: '/images/logo.png',
+        description: 'Welcome to our page!',
+        theme: { 
+          primaryColor: '#007bff', 
+          secondaryColor: '#6c757d',
+          primaryTextColor: '#ffffff',
+          secondaryTextColor: '#ffffff',
+          backgroundColor: '#f0f2f5',
+          containerColor: '#ffffff'
+        },
+        socialLinks: [],
+        links: [],
+        campaigns: [],
+      });
+      console.log('Master config created.');
+    } else {
+      console.log('Master config already exists.');
+    }
+
+    const masterAnalyticsExists = await redis.exists('analytics:tenant_1');
+    if (!masterAnalyticsExists) {
+      console.log('Master analytics not found, creating...');
+      await redis.set('analytics:tenant_1', {
+        visits: [],
+        clicks: [],
+      });
+      console.log('Master analytics created.');
+    } else {
+      console.log('Master analytics already exists.');
+    }
+    console.log('Data initialization complete.');
+  } catch (error) {
+    console.error('CRITICAL ERROR during data initialization:', error);
   }
 };
 
