@@ -174,7 +174,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: `"linkreach.xyz" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+        from: `"LinkReach Login" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
         to: email,
         subject: 'Your Login Link for linkreach.xyz',
         html: `
@@ -488,7 +488,7 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
   <h2>You've been invited!</h2>
   <p>You have been invited to join the "${tenant.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
   <p style="margin: 20px 0;">
-    <a href="${baseUrl}/login" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
+    <a href="${baseUrl}/login?invited=true" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
   <p>Thanks,<br>The linkreach.xyz Team</p>
 </div>

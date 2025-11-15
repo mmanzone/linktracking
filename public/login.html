@@ -8,6 +8,10 @@
 </head>
 <body class="homepage">
     <div class="container">
+        <div id="invite-banner" style="display: none; background-color: #e7f3ff; color: #004085; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <p><strong>Welcome to linkreach.xyz!</strong> Your account has been created.</p>
+            <p>You can now use this service to create and manage tracked links for your campaigns. Log in below to get started.</p>
+        </div>
         <header class="homepage-header">
             <h1>Log in to your account</h1>
             <p>Enter your email address below to receive a magic link to sign in. If you don't have an account yet, one will be created for you if you've been invited to a team.</p>
@@ -22,5 +26,11 @@
         </main>
     </div>
     <script src="js/login.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('invited') === 'true') {
+            document.getElementById('invite-banner').style.display = 'block';
+        }
+    </script>
 </body>
 </html>
