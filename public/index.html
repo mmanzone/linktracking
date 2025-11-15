@@ -8,29 +8,13 @@
 </head>
 <body class="homepage">
     <div class="container">
-        <div id="error-message" style="display: none; color: red; margin-bottom: 20px;"></div>
+        <div id="error-message" style="display: none;"></div>
         <header class="homepage-header">
             <h1>linkreach.xyz</h1>
-            <p>Your simple solution for creating, managing, and tracking links for events, campaigns, and communities.</p>
+            <p>Go paperless. Measure your impact.</p>
         </header>
         
         <main class="homepage-main">
-            <section class="features">
-                <h2>Why linkreach.xyz?</h2>
-                <div class="feature">
-                    <h3>Go Paperless</h3>
-                    <p>Replace printed materials with a single, dynamic QR code. Update your links anytime without reprinting anything.</p>
-                </div>
-                <div class="feature">
-                    <h3>Measure Your Impact</h3>
-                    <p>Track every click and visit to understand how your audience engages with your content. Get insights by day, campaign, or time of day.</p>
-                </div>
-                <div class="feature">
-                    <h3>Fully Customizable</h3>
-                    <p>Tailor your landing page to match your brand. Customize colors, logos, and link order to create a seamless experience.</p>
-                </div>
-            </section>
-            
             <section class="cta">
                 <a href="/login" class="button">Login to your account</a>
             </section>
@@ -40,7 +24,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('error') === 'not_found') {
             const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = 'This account does not exist. Please check the URL and try again.';
+            errorDiv.textContent = 'This account does not exist.';
             errorDiv.style.display = 'block';
         }
     </script>

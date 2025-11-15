@@ -109,11 +109,61 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(users => {
                 users.forEach(user => {
                     const userEl = document.createElement('div');
-                    userEl.textContent = user.email;
+                    userEl.classList.add('user-admin-row');
+                    userEl.dataset.userId = user.id;
+                    userEl.innerHTML = `
+                        <span>${user.firstName || ''} ${user.lastName || ''} (${user.email}) - Last Login: ${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'} ${user.disabled ? '(Disabled)' : ''}</span>
+                        <div>
+                            <button class="edit-user">Edit</button>
+                            <button class="delete-user">Delete</button>
+                        </div>
+                    `;
                     usersList.appendChild(userEl);
                 });
             });
         
+        usersList.addEventListener('click', (e) => {
+            const userId = e.target.closest('.user-admin-row').dataset.userId;
+            
+            if (e.target.classList.contains('delete-user')) {
+                if (confirm('Are you sure you want to delete this user?')) {
+                    fetch(`/api/users/${userId}`, { method: 'DELETE' })
+                        .then(() => loadAdminContent('users'));
+                }
+            }
+            if (e.target.classList.contains('edit-user')) {
+                const row = e.target.closest('.user-admin-row');
+                fetch('/api/users').then(res => res.json()).then(users => {
+                    const user = users.find(u => u.id === userId);
+                    row.innerHTML = `
+                        <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
+                        <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
+                        <input type="email" class="edit-email" value="${user.email}">
+                        <label><input type="checkbox" class="edit-disabled" ${user.disabled ? 'checked' : ''}> Disabled</label>
+                        <button class="save-user" data-id="${user.id}">Save</button>
+                        <button class="cancel-edit">Cancel</button>
+                    `;
+                });
+            }
+            if (e.target.classList.contains('save-user')) {
+                const row = e.target.closest('.user-admin-row');
+                const body = {
+                    firstName: row.querySelector('.edit-firstName').value,
+                    lastName: row.querySelector('.edit-lastName').value,
+                    email: row.querySelector('.edit-email').value,
+                    disabled: row.querySelector('.edit-disabled').checked
+                };
+                fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }).then(() => loadAdminContent('users'));
+            }
+            if (e.target.classList.contains('cancel-edit')) {
+                loadAdminContent('users');
+            }
+        });
+
         document.getElementById('invite-user-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('invite-email-input').value;
@@ -263,10 +313,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div>
                         <p>Standard</p>
                         <div id="qrcode-standard"></div>
+                        <button id="download-standard">Download</button>
                     </div>
                     <div>
                         <p>With Logo</p>
                         <div id="qrcode-logo"></div>
+                        <button id="download-logo">Download</button>
+                    </div>
+                    <div>
+                        <p>With Name</p>
+                        <div id="qrcode-text"></div>
+                        <button id="download-text">Download</button>
                     </div>
                 </div>
             </div>
@@ -274,7 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // QR Code Generation
         const tenantUrl = `${window.location.origin}/${currentTenant.name}`;
-        new QRCode(document.getElementById("qrcode-standard"), {
+        
+        const qrCodeStandard = new QRCode(document.getElementById("qrcode-standard"), {
             text: tenantUrl,
             width: 128,
             height: 128,
@@ -295,6 +353,63 @@ document.addEventListener('DOMContentLoaded', () => {
             logoHeight: 32,
             logoBackgroundColor: '#ffffff',
             logoBackgroundTransparent: false
+        });
+
+        // New QR Code with Text
+        const qrCodeText = document.getElementById('qrcode-text');
+        const canvas = document.createElement('canvas');
+        qrCodeText.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        const qr = new QRCode(document.createElement('div'), {
+            text: tenantUrl,
+            width: 128,
+            height: 128,
+            colorDark : config.theme.primaryColor,
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H,
+            logo: config.logo,
+            logoWidth: 32,
+            logoHeight: 32,
+            logoBackgroundColor: '#ffffff',
+            logoBackgroundTransparent: false,
+            onRenderingEnd: (qrCodeOptions, dataURL) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = () => {
+                    canvas.width = 128;
+                    canvas.height = 128 + 30;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    ctx.fillStyle = config.theme.primaryColor;
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(config.companyName, 64, 128 + 20);
+                };
+                img.src = dataURL;
+            }
+        });
+
+        // Add Download Buttons
+        document.getElementById('download-standard').addEventListener('click', () => {
+            const canvas = document.querySelector('#qrcode-standard canvas');
+            const link = document.createElement('a');
+            link.download = 'qrcode-standard.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+        document.getElementById('download-logo').addEventListener('click', () => {
+            const canvas = document.querySelector('#qrcode-logo canvas');
+            const link = document.createElement('a');
+            link.download = 'qrcode-logo.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+        document.getElementById('download-text').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'qrcode-with-name.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         });
 
 
@@ -571,14 +686,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCampaignsTab(config) {
-        let tenantFilter = '';
-        if (currentUser.role === 'master-admin') {
-            tenantFilter = `
-                <select id="tenant-campaign-filter">
-                    <option value="">All Tenants</option>
-                </select>
-            `;
-        }
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
                 <h2>Campaign Management</h2>
@@ -605,35 +712,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        if (currentUser.role === 'master-admin') {
-            const tenantCampaignFilter = document.getElementById('tenant-campaign-filter');
-            fetch('/api/tenants')
-                .then(res => res.json())
-                .then(tenants => {
-                    tenants.forEach(tenant => {
-                        tenantCampaignFilter.innerHTML += `<option value="${tenant.id}">${tenant.displayName}</option>`;
-                    });
-                });
-            tenantCampaignFilter.addEventListener('change', displayCampaigns);
-        }
-
         const campaignsList = document.getElementById('campaigns-list');
         const campaignDateFilter = document.getElementById('campaign-date-filter');
-        
-        const fetchCampaigns = () => {
-            let url = '/api/config'; // Regular users get their own config
-            if (currentUser.role === 'master-admin') {
-                const tenantId = document.getElementById('tenant-campaign-filter')?.value;
-                if (tenantId) {
-                    // This is a bit of a hack. We'd ideally have a dedicated endpoint.
-                    // We can't get another tenant's config directly for security reasons.
-                    // For now, master admin will only see their own campaigns.
-                }
-            }
-            fetch(url)
-                .then(res => res.json())
-                .then(config => displayCampaigns(config.campaigns));
-        };
 
         const displayCampaigns = (campaigns) => {
             campaignsList.innerHTML = '';
@@ -670,9 +750,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         };
 
-        campaignDateFilter.addEventListener('change', displayCampaigns);
-        displayCampaigns(); // Initial display
-
         document.getElementById('add-campaign').addEventListener('click', () => {
             fetch('/api/admin/config').then(res => res.json()).then(config => {
                 const newConfig = { ...config };
@@ -693,6 +770,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveConfig(newConfig).then(() => loadAdminContent('campaigns'));
             });
         });
+        
+        fetch('/api/admin/config').then(res => res.json()).then(config => displayCampaigns(config.campaigns));
+        campaignDateFilter.addEventListener('change', () => fetch('/api/admin/config').then(res => res.json()).then(config => displayCampaigns(config.campaigns)));
+
 
         campaignsList.addEventListener('click', (event) => {
             const campaignId = event.target.closest('.campaign-admin')?.dataset.id;

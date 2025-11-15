@@ -41,8 +41,12 @@ const initializeRedisData = async () => {
       await redis.set('user:matthias@manzone.org', {
         id: 'user_1',
         email: 'matthias@manzone.org',
+        firstName: 'Matthias',
+        lastName: 'Manzone',
         tenants: ['tenant_1'],
         role: 'master-admin',
+        disabled: false,
+        lastLogin: null
       });
       console.log('Master user created.');
     } else {
@@ -153,6 +157,15 @@ app.post('/api/auth/login', async (req, res) => {
 
   if (user) {
     console.log(`User found for email: ${email}`);
+    
+    if (user.disabled) {
+        console.log(`Login attempt for disabled user: ${email}`);
+        return res.status(403).json({ success: false, message: 'Account is disabled.' });
+    }
+    
+    user.lastLogin = new Date().toISOString();
+    await redis.set(`user:${email}`, user);
+    
     const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '15m' });
     // Dynamically generate the magic link URL
     const host = req.headers.host;
@@ -479,6 +492,59 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
         console.error('Error sending invite email:', error);
     }
 
+    res.json({ success: true });
+});
+
+app.put('/api/users/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
+    const { email, firstName, lastName, disabled } = req.body;
+    
+    // This is highly inefficient. A proper user ID -> user email mapping is needed.
+    const userKeys = await redis.keys('user:*');
+    let userKey = null;
+    let user = null;
+    for (const key of userKeys) {
+        const u = await redis.get(key);
+        if (u.id === id) {
+            userKey = key;
+            user = u;
+            break;
+        }
+    }
+
+    if (user) {
+        user.firstName = firstName;
+        user.lastName = lastName;
+        user.disabled = disabled;
+        
+        // Handle email change
+        if (email !== user.email) {
+            await redis.del(userKey);
+            user.email = email;
+            await redis.set(`user:${email}`, user);
+        } else {
+            await redis.set(userKey, user);
+        }
+    }
+    res.json({ success: true });
+});
+
+app.delete('/api/users/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
+    
+    const userKeys = await redis.keys('user:*');
+    let userKey = null;
+    for (const key of userKeys) {
+        const u = await redis.get(key);
+        if (u.id === id) {
+            userKey = key;
+            break;
+        }
+    }
+
+    if (userKey) {
+        await redis.del(userKey);
+    }
     res.json({ success: true });
 });
 
