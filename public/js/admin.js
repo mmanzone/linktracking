@@ -21,6 +21,37 @@ document.addEventListener('DOMContentLoaded', () => {
             currentTenant = data.tenant;
             
             document.getElementById('admin-title').textContent = `${currentTenant.displayName} - Admin Panel`;
+            document.getElementById('logout-btn').textContent = `Logout ${currentUser.firstName || ''} ${currentUser.lastName || ''}`;
+            
+            // Prompt for name if missing
+            if (!currentUser.firstName || !currentUser.lastName) {
+                const namePrompt = document.createElement('div');
+                namePrompt.classList.add('name-prompt');
+                namePrompt.innerHTML = `
+                    <p>Please provide your name for a more personalized experience:</p>
+                    <input type="text" id="first-name-input" placeholder="First Name" value="${currentUser.firstName || ''}">
+                    <input type="text" id="last-name-input" placeholder="Last Name" value="${currentUser.lastName || ''}">
+                    <button id="save-name-btn">Save Name</button>
+                `;
+                adminPanelDiv.prepend(namePrompt);
+
+                document.getElementById('save-name-btn').addEventListener('click', () => {
+                    const firstName = document.getElementById('first-name-input').value;
+                    const lastName = document.getElementById('last-name-input').value;
+
+                    fetch('/api/users/me', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ firstName, lastName })
+                    })
+                    .then(() => {
+                        currentUser.firstName = firstName;
+                        currentUser.lastName = lastName;
+                        document.getElementById('logout-btn').textContent = `Logout ${firstName} ${lastName}`;
+                        namePrompt.remove();
+                    });
+                });
+            }
             
             if (currentUser.role === 'master-admin') {
                 const tenantsTab = document.createElement('button');
