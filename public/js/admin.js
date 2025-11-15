@@ -109,7 +109,15 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="users-tab" class="tab-content active">
                 <h2>User Management</h2>
-                <div id="users-list"></div>
+                <div id="users-list-container">
+                    <div class="user-admin-header">
+                        <div class="user-col-email">Email</div>
+                        <div class="user-col-name">First & Last Name</div>
+                        <div class="user-col-login">Last Login</div>
+                        <div class="user-col-actions">Actions</div>
+                    </div>
+                    <div id="users-list"></div>
+                </div>
                 ${!isAdmin ? `
                 <h3>Invite New User</h3>
                 <form id="invite-user-form">
@@ -132,16 +140,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     users.unshift(currentUserData);
                 }
 
+                // Move current user to the top
+                const currentUserIndex = users.findIndex(u => u.id === currentUser.id);
+                if (currentUserIndex > -1) {
+                    const [currentUserData] = users.splice(currentUserIndex, 1);
+                    users.unshift(currentUserData);
+                }
+
                 users.forEach(user => {
                     const userEl = document.createElement('div');
                     userEl.classList.add('user-admin-row');
                     userEl.dataset.userId = user.id;
                     const isCurrentUser = user.id === currentUser.id;
                     
+                    const isCurrentUser = user.id === currentUser.id;
+                    
                     userEl.innerHTML = `
-                        <span>${user.firstName || ''} ${user.lastName || ''} (${user.email}) - Last Login: ${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'} ${user.disabled ? '(Disabled)' : ''}</span>
-                        <div>
+                        <div class="user-col-email">${user.email}</div>
+                        <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
+                        <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'} ${user.disabled ? '(Disabled)' : ''}</div>
+                        <div class="user-col-actions">
                             <button class="edit-user">Edit</button>
+                            ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                             ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                         </div>
                     `;
@@ -163,17 +183,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch(userApiUrl).then(res => res.json()).then(users => {
                     const user = users.find(u => u.id === userId);
                     row.innerHTML = `
-                        <div class="user-edit-form">
+                        <div class="user-col-email"><input type="email" class="edit-email" value="${user.email}"></div>
+                        <div class="user-col-name">
                             <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
                             <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
-                            <input type="email" class="edit-email" value="${user.email}">
-                            <div class="edit-disabled-container">
-                                <label><input type="checkbox" class="edit-disabled" ${user.disabled ? 'checked' : ''}> Disabled</label>
-                            </div>
-                            <div class="edit-buttons">
-                                <button class="save-user" data-id="${user.id}">Save</button>
-                                <button class="cancel-edit">Cancel</button>
-                            </div>
+                        </div>
+                        <div class="user-col-login">
+                             <label><input type="checkbox" class="edit-disabled" ${user.disabled ? 'checked' : ''}> Disabled</label>
+                        </div>
+                        <div class="user-col-actions">
+                            <button class="save-user" data-id="${user.id}">Save</button>
+                            <button class="cancel-edit">Cancel</button>
                         </div>
                     `;
                 });
