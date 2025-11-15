@@ -21,13 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentTenant = data.tenant;
             
             document.getElementById('admin-title').textContent = `${currentTenant.displayName} - Admin Panel`;
-            document.getElementById('logout-btn').textContent = `Logout ${currentUser.firstName || ''} ${currentUser.lastName || ''}`;
             
-            // Prompt for name if missing
-            if (!currentUser.firstName || !currentUser.lastName) {
-                promptForName();
-            }
-
             if (currentUser.role === 'master-admin') {
                 const tenantsTab = document.createElement('button');
                 tenantsTab.classList.add('tab-link');
@@ -109,15 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="users-tab" class="tab-content active">
                 <h2>User Management</h2>
-                <div id="users-list-container">
-                    <div class="user-admin-header">
-                        <div class="user-col-email">Email</div>
-                        <div class="user-col-name">First & Last Name</div>
-                        <div class="user-col-login">Last Login</div>
-                        <div class="user-col-actions">Actions</div>
-                    </div>
-                    <div id="users-list"></div>
-                </div>
+                <div id="users-list"></div>
                 ${!isAdmin ? `
                 <h3>Invite New User</h3>
                 <form id="invite-user-form">
@@ -133,33 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(userApiUrl)
             .then(res => res.json())
             .then(users => {
-                // Move current user to the top
-                const currentUserIndex = users.findIndex(u => u.id === currentUser.id);
-                if (currentUserIndex > -1) {
-                    const [currentUserData] = users.splice(currentUserIndex, 1);
-                    users.unshift(currentUserData);
-                }
-
-                // Move current user to the top
-                const currentUserIndex = users.findIndex(u => u.id === currentUser.id);
-                if (currentUserIndex > -1) {
-                    const [currentUserData] = users.splice(currentUserIndex, 1);
-                    users.unshift(currentUserData);
-                }
-
                 users.forEach(user => {
                     const userEl = document.createElement('div');
                     userEl.classList.add('user-admin-row');
                     userEl.dataset.userId = user.id;
-                    const isCurrentUser = user.id === currentUser.id;
-                    
                     userEl.innerHTML = `
-                        <div class="user-col-email">${user.email}</div>
-                        <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
-                        <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'} ${user.disabled ? '(Disabled)' : ''}</div>
-                        <div class="user-col-actions">
+                        <span>${user.firstName || ''} ${user.lastName || ''} (${user.email}) - Last Login: ${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'} ${user.disabled ? '(Disabled)' : ''}</span>
+                        <div>
                             <button class="edit-user">Edit</button>
-                            ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
+                            <button class="delete-user">Delete</button>
                         </div>
                     `;
                     usersList.appendChild(userEl);
@@ -180,18 +148,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch(userApiUrl).then(res => res.json()).then(users => {
                     const user = users.find(u => u.id === userId);
                     row.innerHTML = `
-                        <div class="user-col-email"><input type="email" class="edit-email" value="${user.email}"></div>
-                        <div class="user-col-name">
-                            <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
-                            <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
-                        </div>
-                        <div class="user-col-login">
-                             <label><input type="checkbox" class="edit-disabled" ${user.disabled ? 'checked' : ''}> Disabled</label>
-                        </div>
-                        <div class="user-col-actions">
-                            <button class="save-user" data-id="${user.id}">Save</button>
-                            <button class="cancel-edit">Cancel</button>
-                        </div>
+                        <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
+                        <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
+                        <input type="email" class="edit-email" value="${user.email}">
+                        <label><input type="checkbox" class="edit-disabled" ${user.disabled ? 'checked' : ''}> Disabled</label>
+                        <button class="save-user" data-id="${user.id}">Save</button>
+                        <button class="cancel-edit">Cancel</button>
                     `;
                 });
             }
@@ -230,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     messageEl.textContent = 'Invite sent successfully!';
                     loadAdminContent('users');
                 });
+            });
         }
     }
     
@@ -914,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
                             <div class="button-container">
                                 <button class="save-edit-campaign">Save</button>
-                                <button class="cancel-edit">Cancel</button>
+                                <button class="cancel-edit-campaign">Cancel</button>
                             </div>
                         </div>
                     `;
@@ -1391,49 +1354,4 @@ document.addEventListener('DOMContentLoaded', () => {
             return res;
         });
     }
-
-    function promptForName() {
-        const modal = document.createElement('div');
-        modal.innerHTML = `
-            <div class="modal-backdrop"></div>
-            <div class="modal-content">
-                <h2>Welcome to linkreach.xyz!</h2>
-                <p>Please enter your name to complete your profile.</p>
-                <form id="name-prompt-form">
-                    <input type="text" id="firstName-prompt" placeholder="First Name" required>
-                    <input type="text" id="lastName-prompt" placeholder="Last Name" required>
-                    <button type="submit">Save</button>
-                </form>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        document.getElementById('name-prompt-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const firstName = document.getElementById('firstName-prompt').value;
-            const lastName = document.getElementById('lastName-prompt').value;
-            const body = { ...currentUser, firstName, lastName };
-            
-            fetch(`/api/users/${currentUser.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            }).then(() => {
-                currentUser.firstName = firstName;
-                currentUser.lastName = lastName;
-                document.getElementById('logout-btn').textContent = `Logout ${firstName} ${lastName}`;
-                modal.remove();
-            });
-        });
-    }
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            loadAdminContent(tab.dataset.tab);
-        });
-    });
-
-    loadAdminContent('general');
 });
