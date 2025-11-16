@@ -263,9 +263,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     
     if (sendWelcomeEmail) {
         try {
-            const host = req.headers.host;
-            const protocol = host.includes('localhost') ? 'http' : 'https';
-            const baseUrl = process.env.BASE_URL.replace(/\/$/, '');
+            const baseUrl = (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
             await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
@@ -480,8 +478,8 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
     // Send invite email
     try {
         const host = req.headers.host;
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const baseUrl = process.env.BASE_URL.replace(/\/$/, '');
+        const protocol = host.includes('localhost') ? 'http' : 'https-';
+        const baseUrl = (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
         await resend.emails.send({
             from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
             to: email,
