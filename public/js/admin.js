@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('admin-title').textContent = currentTenant.displayName;
             document.getElementById('logout-btn').textContent = `Logout ${currentUser.firstName || ''} ${currentUser.lastName || ''}`;
             
-            // Prompt for name if missing
             if (!currentUser.firstName || !currentUser.lastName) {
                 const namePrompt = document.createElement('div');
                 namePrompt.classList.add('name-prompt', 'message', 'info');
@@ -795,7 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderCampaignsTab() {
+    function renderCampaignsTab(config) {
         let tenantFilter = '';
         if (currentUser.role === 'master-admin') {
             tenantFilter = `
@@ -1070,127 +1069,389 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                         });
                 }
+
+                if (event.target.classList.contains('delete-campaign')) {
+                    if (confirm('Are you sure you want to delete this campaign?')) {
+                        fetch('/api/admin/config').then(res => res.json()).then(config => {
+                            let newConfig = { ...config };
+                            newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
+                            saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
+                        });
+                    }
+                }
             });
         });
     }
 
     function renderAnalyticsTab(config) {
+        let tenantFilter = '';
+        if (currentUser.role === 'master-admin') {
+            tenantFilter = `
+                <select id="tenant-analytics-filter">
+                    <option value="">All Tenants</option>
+                </select>
+            `;
+        }
+
         adminContentDiv.innerHTML = `
             <div id="analytics-tab" class="tab-content active">
                 <h2>Analytics</h2>
                 <p style="font-size: 0.9rem; color: #606770;">
-                    Here you can find the analytics data for your tenant. Use the filters to select the data you want to see.
+                    Shows the total number of visitors to the landing page, i.e. people who have opened the landing page using the QR code or not. "Abandoned" shows people who did not go further than the landing page and didn't click on a link. "Followed links" show the actual link or links they followed. One visitor might click on multiple links. 
+                    You can choose to see the results per day using the date filter, or per specific campaign (those will filter by campaign date automatically). If you want the total number of the period, instead of a day-by-day breakdown, click the "Cumulative" checkbox. 
+                    The visitors by hour show the time of the day the visitor opened the page, cumulative over the days in the time period. This highlights the busier engagement period during a campaign for example.
                 </p>
-                <div id="analytics-filters">
-                    <label>Tenant: 
-                        <select id="tenant-filter">
-                            <option value="">All Tenants</option>
-                        </select>
-                    </label>
-                    <label>Campaign: 
-                        <select id="campaign-filter">
-                            <option value="">All Campaigns</option>
-                        </select>
-                    </label>
-                    <label>Date Range: 
-                        <input type="date" id="start-date-filter">
-                        to
-                        <input type="date" id="end-date-filter">
-                    </label>
-                    <button id="apply-filters">Apply Filters</button>
+                <div id="analytics-filters" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                    ${tenantFilter}
+                    <select id="date-filter">
+                        <option value="30">Last 30 days</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="1">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="90">Last 3 months</option>
+                        <option value="180">Last 6 months</option>
+                        <option value="365">Last 12 months</option>
+                        <option value="all">All time</option>
+                    </select>
+                    <select id="campaign-filter"></select>
+                    <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
+                    <button id="export-analytics">Export Graphs</button>
+                    <button id="refresh-analytics" title="Refresh Data">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </button>
                 </div>
-                <div id="analytics-results"></div>
+                <div id="analytics-charts">
+                    <h3>Visitor Engagement</h3>
+                    <div style="height: 200px; margin-bottom: 20px;"><canvas id="visits-chart"></canvas></div>
+                    <h3>Clicks per Link</h3>
+                    <div style="height: 400px; margin-bottom: 20px;"><canvas id="clicks-chart"></canvas></div>
+                    <h3>Visitors by Hour</h3>
+                    <div style="height: 300px; margin-bottom: 20px;"><canvas id="hourly-chart"></canvas></div>
+                </div>
+                <small>All times are in Australia/Sydney timezone.</small>
             </div>
         `;
+        
+        if (currentUser.role === 'master-admin') {
+            const tenantAnalyticsFilter = document.getElementById('tenant-analytics-filter');
+            fetch('/api/tenants')
+                .then(res => res.json())
+                .then(tenants => {
+                    tenants.forEach(tenant => {
+                        tenantAnalyticsFilter.innerHTML += `<option value="${tenant.id}">${tenant.displayName}</option>`;
+                    });
+                });
+        }
 
-        const tenantFilter = document.getElementById('tenant-filter');
+        document.getElementById('export-analytics').addEventListener('click', () => {
+            const chartsContainer = document.getElementById('analytics-charts');
+            html2canvas(chartsContainer).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'analytics-export.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
+
+        const dateFilter = document.getElementById('date-filter');
         const campaignFilter = document.getElementById('campaign-filter');
-        const startDateFilter = document.getElementById('start-date-filter');
-        const endDateFilter = document.getElementById('end-date-filter');
-        const analyticsResults = document.getElementById('analytics-results');
+        const cumulativeCheckbox = document.getElementById('cumulative-checkbox');
+        const refreshButton = document.getElementById('refresh-analytics');
 
-        // Load tenants for filter
-        fetch('/api/tenants')
-            .then(res => res.json())
-            .then(tenants => {
-                tenants.forEach(tenant => {
-                    const option = document.createElement('option');
-                    option.value = tenant.name;
-                    option.textContent = `${tenant.displayName} (${tenant.name})`;
-                    tenantFilter.appendChild(option);
-                });
-            });
-
-        // Load campaigns for filter
-        fetch('/api/admin/config')
-            .then(res => res.json())
-            .then(config => {
-                config.campaigns.forEach(campaign => {
-                    const option = document.createElement('option');
-                    option.value = campaign.id;
-                    option.textContent = campaign.name;
-                    campaignFilter.appendChild(option);
-                });
-            });
-
-        document.getElementById('apply-filters').addEventListener('click', () => {
-            const tenantId = tenantFilter.value;
-            const campaignId = campaignFilter.value;
-            const startDate = startDateFilter.value;
-            const endDate = endDateFilter.value;
-
-            fetch('/api/analytics')
+        refreshButton.addEventListener('click', () => {
+            fetchAnalyticsData();
+        });
+        
+        const fetchAnalyticsData = () => {
+            let url = '/api/analytics';
+            if (currentUser.role === 'master-admin') {
+                const tenantId = document.getElementById('tenant-analytics-filter').value;
+                url = `/api/admin/analytics?tenantId=${tenantId}`;
+            }
+            
+            fetch(url)
                 .then(response => response.json())
                 .then(analytics => {
-                    let filteredVisits = analytics.visits;
-                    let filteredClicks = analytics.clicks;
-
-                    // Apply tenant filter
-                    if (tenantId) {
-                        filteredVisits = filteredVisits.filter(visit => visit.tenantId === tenantId);
-                        filteredClicks = filteredClicks.filter(click => click.tenantId === tenantId);
+                    let allConfigs = null;
+                    if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
+                        fetch('/api/admin/all-configs')
+                            .then(res => res.json())
+                            .then(configs => {
+                                allConfigs = configs;
+                                processAnalytics(analytics, allConfigs);
+                            });
+                    } else {
+                        processAnalytics(analytics);
                     }
+                });
+        };
 
-                    // Apply campaign filter
-                    if (campaignId) {
-                        filteredVisits = filteredVisits.filter(visit => visit.campaignId === campaignId);
-                        filteredClicks = filteredClicks.filter(click => click.campaignId === campaignId);
+        const processAnalytics = (analytics, allConfigs = null) => {
+            let processedAnalytics = analytics;
+            if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
+                processedAnalytics = Object.values(analytics).reduce((acc, tenantAnalytics) => {
+                    if (tenantAnalytics) {
+                        acc.visits.push(...tenantAnalytics.visits);
+                        acc.clicks.push(...tenantAnalytics.clicks);
                     }
+                    return acc;
+                }, { visits: [], clicks: [] });
+            }
+            filterAnalyticsData(processedAnalytics, allConfigs);
+        };
 
-                    // Apply date range filter
-                    if (startDate) {
-                        filteredVisits = filteredVisits.filter(visit => new Date(visit.timestamp) >= new Date(startDate));
-                        filteredClicks = filteredClicks.filter(click => new Date(click.timestamp) >= new Date(startDate));
-                    }
-                    if (endDate) {
-                        filteredVisits = filteredVisits.filter(visit => new Date(visit.timestamp) <= new Date(endDate));
-                        filteredClicks = filteredClicks.filter(click => new Date(click.timestamp) <= new Date(endDate));
-                    }
+        const getSydneyHour = (utcIsoString) => {
+            const date = new Date(utcIsoString);
+            const sydneyTime = new Date(date.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }));
+            return sydneyTime.getHours();
+        };
 
-                    // Group by date
-                    const visitsByDate = {};
-                    const clicksByDate = {};
-                    filteredVisits.forEach(visit => {
-                        const date = new Date(visit.timestamp).toISOString().split('T')[0];
-                        if (!visitsByDate[date]) {
-                            visitsByDate[date] = 0;
-                        }
-                        visitsByDate[date]++;
-                    });
-                    filteredClicks.forEach(click => {
-                        const date = new Date(click.timestamp).toISOString().split('T')[0];
-                        if (!clicksByDate[date]) {
-                            clicksByDate[date] = 0;
-                        }
-                        clicksByDate[date]++;
-                    });
+        const updateAnalyticsCharts = (analyticsData, allConfigs) => {
+            const visitsChartCanvas = document.getElementById('visits-chart');
+            const clicksChartCanvas = document.getElementById('clicks-chart');
+            const hourlyChartCanvas = document.getElementById('hourly-chart');
+            if (visitsChartCanvas.chart) visitsChartCanvas.chart.destroy();
+            if (clicksChartCanvas.chart) clicksChartCanvas.chart.destroy();
+            if (hourlyChartCanvas.chart) hourlyChartCanvas.chart.destroy();
 
-                    // Prepare data for chart
-                    const chartData = {
-                        labels: Object.keys(visitsByDate),
+            const isCumulative = cumulativeCheckbox.checked;
+
+            if (isCumulative) {
+                const totalVisits = analyticsData.visits.length;
+                const totalClicks = analyticsData.clicks.length;
+                const abandonedVisits = totalVisits - new Set(analyticsData.clicks.map(c => c.ip)).size;
+
+                visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Visitor Engagement'],
                         datasets: [
                             {
-                                label: 'Visits',
-                                data: Object.values(visitsByDate),
+                                label: `Followed Link (${totalClicks} - ${totalVisits > 0 ? ((totalClicks / totalVisits) * 100).toFixed(1) : 0}%)`,
+                                data: [totalClicks],
+                                backgroundColor: config.theme.secondaryColor
+                            },
+                            {
+                                label: `Abandoned (${abandonedVisits} - ${totalVisits > 0 ? ((abandonedVisits / totalVisits) * 100).toFixed(1) : 0}%)`,
+                                data: [abandonedVisits],
                                 backgroundColor: config.theme.primaryColor
-                           
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { x: { stacked: true }, y: { stacked: true } }
+                    }
+                });
+            } else {
+                const dataByDay = {};
+                analyticsData.visits.forEach(v => {
+                    const day = new Date(v.timestamp).toLocaleDateString('en-CA'); 
+                    if (!dataByDay[day]) dataByDay[day] = { visits: 0, clicks: 0 };
+                    dataByDay[day].visits++;
+                });
+                analyticsData.clicks.forEach(c => {
+                    const day = new Date(c.timestamp).toLocaleDateString('en-CA');
+                    if (!dataByDay[day]) dataByDay[day] = { visits: 0, clicks: 0 };
+                    dataByDay[day].clicks++;
+                });
+
+                const sortedDays = Object.keys(dataByDay).sort();
+                const followedData = sortedDays.map(day => dataByDay[day].clicks);
+                const abandonedData = sortedDays.map(day => dataByDay[day].visits - dataByDay[day].clicks);
+
+                visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedDays,
+                        datasets: [
+                            {
+                                label: 'Followed Link',
+                                data: followedData,
+                                backgroundColor: config.theme.secondaryColor
+                            },
+                            {
+                                label: 'Abandoned',
+                                data: abandonedData,
+                                backgroundColor: config.theme.primaryColor
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+                    }
+                });
+            }
+        
+            const clicksPerLink = {};
+            analyticsData.clicks.forEach(click => {
+                clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
+            });
+
+            const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
+            
+            const getLinkName = (linkId) => {
+                if (linkId.startsWith('social-')) {
+                    const name = linkId.replace('social-', '');
+                    return name.charAt(0).toUpperCase() + name.slice(1);
+                }
+                if (currentUser.role === 'master-admin' && allConfigs) {
+                    for (const tenantId in allConfigs) {
+                        const link = allConfigs[tenantId].links.find(l => l.id === linkId);
+                        if (link) return link.text;
+                    }
+                }
+                return config.links.find(l => l.id === linkId)?.text || 'Unknown Link';
+            };
+
+            const linkLabels = sortedLinks.map(([linkId]) => getLinkName(linkId));
+            const clickCounts = sortedLinks.map(([,count]) => count);
+
+            clicksChartCanvas.chart = new Chart(clicksChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: linkLabels,
+                    datasets: [{
+                        label: 'Clicks per Link',
+                        data: clickCounts,
+                        backgroundColor: config.theme.secondaryColor
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                }
+            });
+
+            const hourlyVisits = Array(24).fill(0);
+            const hourlyClicks = Array(24).fill(0);
+            analyticsData.visits.forEach(visit => {
+                hourlyVisits[getSydneyHour(visit.timestamp)]++;
+            });
+            analyticsData.clicks.forEach(click => {
+                hourlyClicks[getSydneyHour(click.timestamp)]++;
+            });
+
+            hourlyChartCanvas.chart = new Chart(hourlyChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    datasets: [
+                        {
+                            label: 'Followed Links',
+                            data: hourlyClicks,
+                            backgroundColor: config.theme.secondaryColor
+                        },
+                        {
+                            label: 'Abandoned Visits',
+                            data: hourlyVisits.map((v, i) => v - (hourlyClicks[i] || 0)),
+                            backgroundColor: config.theme.primaryColor
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
+                    }
+                }
+            });
+        };
+
+        const filterAnalyticsData = (analytics, allConfigs) => {
+            const selectedDateFilter = dateFilter.value;
+            const selectedCampaignFilter = campaignFilter.value;
+
+            let filteredAnalytics = { visits: [...analytics.visits], clicks: [...analytics.clicks] };
+
+            const now = new Date();
+            let startDate = new Date();
+            let endDate = new Date(); 
+
+            if (selectedDateFilter === 'all') {
+                startDate = new Date(0);
+            } else if (selectedDateFilter === 'yesterday') {
+                startDate.setDate(now.getDate() - 1);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setDate(now.getDate() - 1);
+                endDate.setHours(23, 59, 59, 999);
+            } else if (selectedDateFilter === '1') { 
+                startDate.setHours(0, 0, 0, 0);
+            } else {
+                startDate.setDate(now.getDate() - parseInt(selectedDateFilter));
+            }
+            
+            filteredAnalytics.visits = filteredAnalytics.visits.filter(v => {
+                const visitDate = new Date(v.timestamp);
+                return visitDate >= startDate && visitDate <= endDate;
+            });
+            filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => {
+                const clickDate = new Date(c.timestamp);
+                return clickDate >= startDate && clickDate <= endDate;
+            });
+
+            const currentCampaignSelection = campaignFilter.value;
+            campaignFilter.innerHTML = '<option value="all">All Campaigns</option>';
+            config.campaigns.forEach(c => {
+                if (new Date(c.endDate) >= startDate) {
+                    campaignFilter.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                }
+            });
+            campaignFilter.value = currentCampaignSelection;
+
+            if (campaignFilter.value !== 'all') {
+                const campaign = config.campaigns.find(c => c.id === campaignFilter.value);
+                if (campaign) {
+                    const campaignStart = new Date(campaign.startDate);
+                    const campaignEnd = new Date(campaign.endDate);
+                    filteredAnalytics.visits = filteredAnalytics.visits.filter(v => new Date(v.timestamp) >= campaignStart && new Date(v.timestamp) <= campaignEnd);
+                    filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => new Date(c.timestamp) >= campaignStart && new Date(c.timestamp) <= campaignEnd);
+                }
+            }
+
+            updateAnalyticsCharts(filteredAnalytics, allConfigs);
+        };
+
+        const filterAndRender = () => fetchAnalyticsData();
+        dateFilter.addEventListener('change', filterAndRender);
+        campaignFilter.addEventListener('change', filterAndRender);
+        cumulativeCheckbox.addEventListener('change', filterAndRender);
+        if (currentUser.role === 'master-admin') {
+            document.getElementById('tenant-analytics-filter').addEventListener('change', filterAndRender);
+        }
+        filterAndRender(); 
+    }
+
+    function showSaveConfirmation(button) {
+        if (!button) return;
+        const originalText = button.textContent;
+        button.classList.add('success');
+        button.textContent = 'Saved!';
+        setTimeout(() => {
+            button.classList.remove('success');
+            button.textContent = originalText;
+        }, 2000);
+    }
+
+    function saveConfig(config, button) {
+        return fetch('/api/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        }).then(res => {
+            if (res.ok && button) {
+                showSaveConfirmation(button);
+            }
+            return res;
+        });
+    }
+});
