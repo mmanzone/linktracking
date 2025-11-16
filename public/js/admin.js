@@ -1000,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ];
 
                     const campaignLinksHtml = sortedLinksForCampaign.map(link => `
-                        <div class="campaign-link-row" data-id="${link.id}">
+                        <div class="campaign-link-row ${!campaign.links.includes(link.id) ? 'inactive' : ''}" data-id="${link.id}">
                             <div class="link-order">
                                 <button class="move-link-up">▲</button>
                                 <button class="move-link-down">▼</button>
