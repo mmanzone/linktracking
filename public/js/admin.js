@@ -204,7 +204,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div class="user-col-actions">
                                 <button class="edit-user">Edit</button>
-                                ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
+                                ${!isCurrentUser ? `
+                                <label class="switch">
+                                    <input type="checkbox" class="disable-user-toggle" ${user.disabled ? '' : 'checked'}>
+                                    <span class="slider round"></span>
+                                </label>
+                                <button class="delete-user">Delete</button>
+                                ` : ''}
                             </div>
                         `;
                         usersList.appendChild(userEl);
@@ -261,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     firstName: row.querySelector('.edit-firstName').value,
                     lastName: row.querySelector('.edit-lastName').value,
                     email: row.querySelector('.edit-email').value,
-                    disabled: !row.querySelector('.edit-disabled').checked
+                    disabled: false // This is handled by the toggle now
                 };
                 fetch(`/api/users/${userId}`, {
                     method: 'PUT',
@@ -278,6 +284,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (e.target.classList.contains('cancel-edit')) {
                 loadAdminContent('users');
+            }
+
+            if (e.target.classList.contains('disable-user-toggle')) {
+                const userRow = e.target.closest('.user-admin-row');
+                const userId = userRow.dataset.userId;
+                const isDisabled = !e.target.checked;
+
+                fetch(userApiUrl)
+                    .then(res => res.json())
+                    .then(users => {
+                        const user = users.find(u => u.id === userId);
+                        if (user) {
+                            user.disabled = isDisabled;
+                            fetch(`/api/users/${userId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(user)
+                            }).then(() => {
+                                if (isDisabled) {
+                                    userRow.classList.add('inactive');
+                                } else {
+                                    userRow.classList.remove('inactive');
+                                }
+                            });
+                        }
+                    });
             }
         });
 
@@ -725,11 +757,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveConfig(newConfig, event.target).then(() => loadAdminContent('links'));
             }
 
-            if (event.target.classList.contains('hide-link-toggle')) {
-                newConfig.links[linkIndex].visible = event.target.checked;
-                saveConfig(newConfig).then(() => loadAdminContent('links'));
-            }
-
             if (event.target.classList.contains('delete-link')) {
                 if (confirm('Are you sure you want to delete this link?')) {
                     newConfig.links = newConfig.links.filter(l => l.id !== linkId);
@@ -739,6 +766,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         linksList.addEventListener('change', (event) => {
+            const linkAdmin = event.target.closest('.link-admin');
+            if (!linkAdmin) return;
+            const linkId = linkAdmin.dataset.id;
+            
+            let newConfig = { ...config };
+            const linkIndex = newConfig.links.findIndex(l => l.id === linkId);
+
+            if (event.target.classList.contains('hide-link-toggle')) {
+                newConfig.links[linkIndex].visible = event.target.checked;
+                saveConfig(newConfig).then(() => loadAdminContent('links'));
+            }
+
             if (event.target.classList.contains('link-icon-upload')) {
                 const file = event.target.files[0];
                 if (file) {
@@ -992,45 +1031,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
                             <div class="button-container">
-                                <button class="save-edit-campaign">Save</button>
-                                <button class="cancel-edit">Cancel</button>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                if (event.target.classList.contains('move-link-up')) {
-                    const linkRow = event.target.closest('.campaign-link-row');
-                    if (linkRow.previousElementSibling) {
-                        linkRow.parentNode.insertBefore(linkRow, linkRow.previousElementSibling);
-                    }
-                }
-
-                if (event.target.classList.contains('move-link-down')) {
-                    const linkRow = event.target.closest('.campaign-link-row');
-                    if (linkRow.nextElementSibling) {
-                        linkRow.parentNode.insertBefore(linkRow.nextElementSibling, linkRow);
-                    }
-                }
-
-                if (event.target.classList.contains('view-campaign-stats')) {
-                    const campaignAdmin = event.target.closest('.campaign-admin');
-                    let statsContainer = campaignAdmin.querySelector('.campaign-stats-container');
-                    if (statsContainer) {
-                        statsContainer.remove();
-                        return;
-                    }
-
-                    statsContainer = document.createElement('div');
-                    statsContainer.classList.add('campaign-stats-container');
-                    campaignAdmin.appendChild(statsContainer);
-
-                    fetch('/api/analytics')
-                        .then(response => response.json())
-                        .then(analytics => {
-                            const campaignStartDate = new Date(campaign.startDate);
-                            const campaignEndDate = new Date(campaign.endDate);
-                            const campaignVisits = analytics.visits.filter(visit => {
                                 const visitDate = new Date(visit.timestamp);
                                 return visitDate >= campaignStartDate && visitDate <= campaignEndDate;
                             });

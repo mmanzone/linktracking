@@ -112,7 +112,6 @@ button.success, .button.success {
     background-color: #fafafa !important;
     color: #999 !important;
     opacity: 0.7;
-    pointer-events: none;
 }
 .inactive * {
     color: #999 !important;
