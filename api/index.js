@@ -5,21 +5,9 @@ const { Redis } = require('@upstash/redis');
 const { put } = require('@vercel/blob');
 const jwt = require('jsonwebtoken');
 const { Resend } = require('resend');
-const fs = require('fs');
-const path = require('path');
 
 const app = express();
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-// Read the logo file and convert it to base64 once on server startup
-let logoDataUri = '';
-try {
-    const logoPath = path.join(process.cwd(), 'public', 'images', 'linkreachxyz-logo.png');
-    const logoBuffer = fs.readFileSync(logoPath);
-    logoDataUri = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-} catch (error) {
-    console.error('CRITICAL: Could not read logo file for emails.', error);
-}
 
 // --- Upstash Redis Client Setup ---
 const redis = new Redis({
@@ -204,7 +192,10 @@ app.post('/api/auth/login', async (req, res) => {
         subject: 'Your Login Link for linkreach.xyz',
         html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${logoDataUri}" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #294a7f; font-size: 32px; margin: 0; font-family: Arial, sans-serif;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 16px; margin: 0; font-family: Arial, sans-serif;">TRACK YOUR IMPACT</p>
+    </div>
   <h2>Log in to your account</h2>
   <p>Hello,</p>
   <p>You requested a link to log in to your account. Click the button below to sign in.</p>
@@ -212,7 +203,7 @@ app.post('/api/auth/login', async (req, res) => {
     <a href="${magicLink}" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
   </p>
   <p>This link will expire in 15 minutes. If you did not request this email, you can safely ignore it.</p>
-  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">- MEASURE YOUR IMPACT -</span></p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
   <hr style="border: none; border-top: 1px solid #eee;">
   <p style="font-size: 0.8em; color: #939598;">
     If you're having trouble with the button above, copy and paste the URL below into your web browser:<br>
@@ -294,7 +285,10 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
                 subject: `Welcome to linkreach.xyz, ${displayName}!`,
                 html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${logoDataUri}" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #294a7f; font-size: 32px; margin: 0; font-family: Arial, sans-serif;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 16px; margin: 0; font-family: Arial, sans-serif;">TRACK YOUR IMPACT</p>
+    </div>
   <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
   <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
@@ -302,7 +296,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
-  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">- MEASURE YOUR IMPACT -</span></p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
 </div>
 `,
             });
@@ -508,13 +502,16 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
             subject: `You've been invited to ${tenant.displayName} on linkreach.xyz`,
             html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${logoDataUri}" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #294a7f; font-size: 32px; margin: 0; font-family: Arial, sans-serif;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 16px; margin: 0; font-family: Arial, sans-serif;">TRACK YOUR IMPACT</p>
+    </div>
   <h2>You've been invited!</h2>
   <p>You have been invited to join the "${tenant.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login?invited=true" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Activate Your Account</a>
   </p>
-  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">- MEASURE YOUR IMPACT -</span></p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
 </div>
 `,
         });
