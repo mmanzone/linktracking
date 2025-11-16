@@ -198,19 +198,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
                             <div class="user-col-status">
                                 <label class="switch">
-                                    <input type="checkbox" class="disable-user-toggle" ${user.disabled ? '' : 'checked'}>
+                                    <input type="checkbox" class="disable-user-toggle" ${!user.disabled ? 'checked' : ''} ${isCurrentUser ? 'disabled' : ''}>
                                     <span class="slider round"></span>
                                 </label>
                             </div>
                             <div class="user-col-actions">
                                 <button class="edit-user">Edit</button>
-                                ${!isCurrentUser ? `
-                                <label class="switch">
-                                    <input type="checkbox" class="disable-user-toggle" ${user.disabled ? '' : 'checked'}>
-                                    <span class="slider round"></span>
-                                </label>
-                                <button class="delete-user">Delete</button>
-                                ` : ''}
+                                ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                             </div>
                         `;
                         usersList.appendChild(userEl);
@@ -267,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     firstName: row.querySelector('.edit-firstName').value,
                     lastName: row.querySelector('.edit-lastName').value,
                     email: row.querySelector('.edit-email').value,
-                    disabled: false // This is handled by the toggle now
+                    disabled: false // This will be handled by the toggle
                 };
                 fetch(`/api/users/${userId}`, {
                     method: 'PUT',
@@ -285,7 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.classList.contains('cancel-edit')) {
                 loadAdminContent('users');
             }
+        });
 
+        usersList.addEventListener('change', (e) => {
             if (e.target.classList.contains('disable-user-toggle')) {
                 const userRow = e.target.closest('.user-admin-row');
                 const userId = userRow.dataset.userId;
@@ -775,7 +771,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (event.target.classList.contains('hide-link-toggle')) {
                 newConfig.links[linkIndex].visible = event.target.checked;
-                saveConfig(newConfig).then(() => loadAdminContent('links'));
+                saveConfig(newConfig).then(() => {
+                    if (event.target.checked) {
+                        linkAdmin.classList.remove('inactive');
+                    } else {
+                        linkAdmin.classList.add('inactive');
+                    }
+                });
             }
 
             if (event.target.classList.contains('link-icon-upload')) {
@@ -1031,49 +1033,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
                             <div class="button-container">
-                                const visitDate = new Date(visit.timestamp);
-                                return visitDate >= campaignStartDate && visitDate <= campaignEndDate;
-                            });
-                            const campaignClicks = analytics.clicks.filter(click => {
-                                const clickDate = new Date(click.timestamp);
-                                return clickDate >= campaignStartDate && clickDate <= campaignEndDate;
-                            });
-                            const abandonedCampaignVisits = campaignVisits.length - new Set(campaignClicks.map(c => c.ip)).size;
-                            const followedClicks = campaignClicks.length;
-
-                            statsContainer.innerHTML = `
-                                <h4>Stats for ${campaign.name}</h4>
-                                <p>Total Visits: ${campaignVisits.length}</p>
-                                <p>Followed Links: ${followedClicks}</p>
-                                <p>Abandoned Visits: ${abandonedCampaignVisits}</p>
-                                <div style="height: 200px; margin-top: 20px;"><canvas id="campaign-chart-${campaign.id}"></canvas></div>
-                            `;
-
-                            new Chart(document.getElementById(`campaign-chart-${campaign.id}`), {
-                                type: 'bar',
-                                data: {
-                                    labels: ['Engagement'],
-                                    datasets: [
-                                        {
-                                            label: 'Followed Links',
-                                            data: [followedClicks],
-                                            backgroundColor: config.theme.secondaryColor
-                                        },
-                                        {
-                                            label: 'Abandoned Visits',
-                                            data: [abandonedCampaignVisits],
-                                            backgroundColor: config.theme.primaryColor
-                                        }
-                                    ]
-                                },
-                                options: {
-                                    indexAxis: 'y',
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: { x: { stacked: true }, y: { stacked: true } }
-                                }
-                            });
-                        });
+                                <button class="save-edit-campaign">Save Campaign</button>
+                                <button class="cancel-edit-campaign">Cancel</button>
+                            </div>
+                        </div>
+                    `;
                 }
 
                 if (event.target.classList.contains('delete-campaign')) {
