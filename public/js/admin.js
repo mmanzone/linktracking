@@ -849,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
-                <h2>Campaign Management</h2>
+                <h2>Campaigns Management</h2>
                 <p style="font-size: 0.9rem; color: #606770;">
                     Campaigns allow you to specify a specific event that you want to track separately, e.g. an event, exhibition or specific outreach. 
                     For each campaign, set the start and end dates, the name of the campaign/event, a description for you to remember, and a banner message that will be displayed on the landing page during the campaign.
@@ -1005,16 +1005,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="move-link-up">▲</button>
                                 <button class="move-link-down">▼</button>
                             </div>
-                            <div style="text-align: center;">
-                                <img src="${link.icon}" alt="${link.text}" style="height: 64px; vertical-align: middle;">
-                            </div>
-                            <div style="font-weight: bold; align-self: center;">${link.text}</div>
-                            <div/>
-                            <label class="switch" style="justify-self: right;">
-                                <input type="checkbox" class="hide-link-toggle" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                            <label class="switch" style="width: auto; justify-self: center;">
+                                <input type="checkbox" class="hide-link-toggle" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
                                 <span class="slider round"></span>
                             </label>
-                            <div></div>
+                            <div class="link" style="background: none; box-shadow: none; padding: 0;">
+                                <img src="${link.icon}" alt="${link.text}" style="height: 64px; vertical-align: middle;">
+                                <span style="font-weight: bold; margin-left: 10px;">${link.text}</span>
+                            </div>
                         </div>
                     `).join('');
 
@@ -1027,10 +1025,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
                                 <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
                             </div>
-                            <h4>Choose the link to display during this campaign</h4>
-                            <div class="link-admin-header">
+                            <h4>Choose the links to display during this campaign</h4>
+                            <div class="link-admin-header" style="grid-template-columns: 40px 60px 1fr;">
                                 <div>Move</div>
-                                <div>Display/Hide</div>
+                                <div>Show</div>
                                 <div>Link Name</div>
                             </div>
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
