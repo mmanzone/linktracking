@@ -101,15 +101,16 @@ initializeRedisData();
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(cookieParser());
 
-// Helper function to reliably get the base URL, removing any trailing slashes
+// Helper function to reliably get the base URL
 const getBaseUrl = (req) => {
-    const baseUrl = process.env.BASE_URL;
-    if (!baseUrl) {
-        console.error('CRITICAL: BASE_URL environment variable is not set. Image and login URLs in emails will be broken.');
-        // Return a placeholder to avoid crashing, but the links will be broken.
-        return 'http://-'; 
+    // 1. Prioritize the BASE_URL environment variable if it's set and valid
+    if (process.env.BASE_URL && process.env.BASE_URL.startsWith('http')) {
+        return process.env.BASE_URL.replace(/\/$/, ''); // Remove any trailing slash
     }
-    return baseUrl.replace(/\/$/, '');
+    // 2. Otherwise, construct it from the request headers
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers.host;
+    return `${protocol}://${host}`;
 };
 
 const authenticate = async (req, res, next) => {
