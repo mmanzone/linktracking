@@ -3,45 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>linkreach.xyz - Simple, Effective Link Management</title>
+    <title>linkreach.xyz: Track Your Impact</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="homepage">
-    <div class="container homepage-container">
-        <div id="error-message" style="display: none;"></div>
-        <header class="homepage-header">
-            <img src="/images/linkreachxyz-logo.png" alt="linkreach.xyz logo">
-            <p>Connect with your communities. Track your impact.</p>
-        </header>
-        
-        <main class="homepage-main">
-            <section class="features">
-                <div class="feature">
-                    <h3>Go Paperless</h3>
-                    <p>Replace printed materials with a single, dynamic QR code. Update your links anytime without reprinting anything.</p>
-                </div>
-                <div class="feature">
-                    <h3>Measure Your Impact</h3>
-                    <p>Track every click and visit to understand how your audience engages with your content. Get insights by day, campaign, or time of day.</p>
-                </div>
-                <div class="feature">
-                    <h3>Fully Customizable</h3>
-                    <p>Tailor your landing page to match your brand. Customize colors, logos, and link order to create a seamless experience.</p>
-                </div>
-            </section>
+<body>
+    <div class="main-container">
+        <div class="homepage-container">
+            <header class="homepage-header">
+                <h1>🚀 linkreach.xyz: Track Your Impact</h1>
+                <h2>Connect Your Community. Measure Your Mission.</h2>
+                <p>The dedicated link hub for NFPs, NGOs, and Local Communities. Easily create custom landing pages and QR codes to share essential information while proving your reach.</p>
+            </header>
 
-            <section class="cta">
-                <a href="/login" class="button">Get Started</a>
-            </section>
-        </main>
+            <main>
+                <section class="features">
+                    <div class="feature">
+                        <h3>1. Centralise & Simplify Sharing</h3>
+                        <p>Tired of sharing multiple links? Design a single, branded landing page where your audience can instantly find all your important resources, events, and donation portals. Access is easy via a clean URL or a scannable QR code—perfect for flyers, signs, and physical campaigns.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>2. Prove Your Reach: Track Your Impact</h3>
+                        <p>Stop guessing. LinkReach gives you the power to see exactly what works. Our built-in analytics track every visit and click, showing you which links your community is engaging with, when they are engaging, and how your campaigns are performing. Data to drive your decisions.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>3. Campaign-Ready, Event-Focused</h3>
+                        <p>Launch event-specific landing pages in minutes. Create a dedicated LinkReach page for your upcoming fundraiser, workshop, or community drive. Customise the links and banner message for the duration of the event, and then track its performance separately from your main page.</p>
+                    </div>
+                </section>
+
+                <section class="how-it-works">
+                    <h3>⚙️ How LinkReach Works</h3>
+                    <p>LinkReach provides each organisation with a unique, customisable page that serves as a central hub for all essential links. Once you register, administrators on your team can easily log in to the intuitive dashboard. Here, you can upload your logo, select theme colours to match your branding, and quickly add or edit the links you want to share. This page is instantly accessible via a shortened URL, which we recommend turning into a dynamic QR code for maximum offline accessibility. Every single visit to your page and every click on a link is automatically logged in your dedicated analytics module. This provides comprehensive, easy-to-read reports that help you measure the real-world impact of your efforts, ensuring you can efficiently allocate resources and refine your communication strategy.</p>
+                </section>
+
+                <section class="cta">
+                    <h3>✨ Get Started Today</h3>
+                    <a href="/login" class="button">Get Started Now</a>
+                    <p>Join the movement! LinkReach is built to amplify the work of non-profits and community organisations. Sign up now and see the difference data-driven sharing makes.</p>
+                </section>
+                
+                <section class="beta-status">
+                    <p>🚧 In Beta Development: LinkReach is currently in its open beta phase. We welcome your community to try all features completely free of charge while we collect valuable feedback and continuously enhance the platform.</p>
+                </section>
+            </main>
+        </div>
+        
+        <footer>
+            <a href="/index.html">Home Page</a>
+            <a href="/login">Get Started</a>
+            <a href="#">About Us</a>
+        </footer>
     </div>
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('error') === 'not_found') {
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = 'This account does not exist.';
-            errorDiv.style.display = 'block';
-        }
-    </script>
 </body>
 </html>

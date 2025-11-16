@@ -193,8 +193,8 @@ app.post('/api/auth/login', async (req, res) => {
         html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
     <div style="margin-bottom: 20px;">
-        <h1 style="color: #294a7f; font-size: 32px; margin: 0; font-family: Arial, sans-serif;">linkreach.xyz</h1>
-        <p style="color: #939598; font-size: 16px; margin: 0; font-family: Arial, sans-serif;">TRACK YOUR IMPACT</p>
+        <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
     </div>
   <h2>Log in to your account</h2>
   <p>Hello,</p>
@@ -286,8 +286,8 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
                 html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
     <div style="margin-bottom: 20px;">
-        <h1 style="color: #294a7f; font-size: 32px; margin: 0; font-family: Arial, sans-serif;">linkreach.xyz</h1>
-        <p style="color: #939598; font-size: 16px; margin: 0; font-family: Arial, sans-serif;">TRACK YOUR IMPACT</p>
+        <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
     </div>
   <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
@@ -503,8 +503,8 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
             html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
     <div style="margin-bottom: 20px;">
-        <h1 style="color: #294a7f; font-size: 32px; margin: 0; font-family: Arial, sans-serif;">linkreach.xyz</h1>
-        <p style="color: #939598; font-size: 16px; margin: 0; font-family: Arial, sans-serif;">TRACK YOUR IMPACT</p>
+        <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
     </div>
   <h2>You've been invited!</h2>
   <p>You have been invited to join the "${tenant.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
