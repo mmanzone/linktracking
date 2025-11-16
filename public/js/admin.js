@@ -1000,19 +1000,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     ];
 
                     const campaignLinksHtml = sortedLinksForCampaign.map(link => `
-                        <div class="campaign-link-row ${!campaign.links.includes(link.id) ? 'inactive' : ''}" data-id="${link.id}">
+                        <div class="link-admin campaign-link-row ${!campaign.links.includes(link.id) ? 'inactive' : ''}" data-id="${link.id}">
                             <div class="link-order">
                                 <button class="move-link-up">▲</button>
                                 <button class="move-link-down">▼</button>
                             </div>
-                            <label class="switch" style="width: auto;">
-                                <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                            <div style="text-align: center;">
+                                <img src="${link.icon}" alt="${link.text}" style="height: 64px; vertical-align: middle;">
+                            </div>
+                            <div style="font-weight: bold; align-self: center;">${link.text}</div>
+                            <div/>
+                            <label class="switch" style="justify-self: right;">
+                                <input type="checkbox" class="hide-link-toggle" ${campaign.links.includes(link.id) ? 'checked' : ''}>
                                 <span class="slider round"></span>
                             </label>
-                            <div class="link">
-                                <img src="${link.icon}" alt="${link.text}" style="height: 64px;">
-                                <span>${link.text}</span>
-                            </div>
+                            <div></div>
                         </div>
                     `).join('');
 
@@ -1025,11 +1027,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
                                 <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
                             </div>
-                            <h4>Links</h4>
-                            <div class="campaign-links-header">
-                                <div class="link-order-header">Move</div>
-                                <div class="link-display-header">Display/Hide</div>
-                                <div class="link-name-header">Link</div>
+                            <h4>Choose the link to display during this campaign</h4>
+                            <div class="link-admin-header">
+                                <div>Move</div>
+                                <div>Display/Hide</div>
+                                <div>Link Name</div>
                             </div>
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
                             <div class="button-container">
