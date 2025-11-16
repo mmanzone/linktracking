@@ -143,7 +143,15 @@ document.addEventListener('DOMContentLoaded', () => {
         adminContentDiv.innerHTML = `
             <div id="users-tab" class="tab-content active">
                 <h2>User Management</h2>
-                <div id="users-list"></div>
+                <div id="users-list-container">
+                    <div class="user-admin-header">
+                        <div class="user-col-email sortable" data-sort="email">Email</div>
+                        <div class="user-col-name sortable" data-sort="firstName">First & Last Name</div>
+                        <div class="user-col-login sortable" data-sort="lastLogin">Last Login</div>
+                        <div class="user-col-actions">Actions</div>
+                    </div>
+                    <div id="users-list"></div>
+                </div>
                 ${!isAdmin ? `
                 <h3>Invite New User</h3>
                 <form id="invite-user-form">
@@ -159,19 +167,66 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(userApiUrl)
             .then(res => res.json())
             .then(users => {
-                users.forEach(user => {
-                    const userEl = document.createElement('div');
-                    userEl.classList.add('user-admin-row');
-                    userEl.dataset.userId = user.id;
-                    userEl.innerHTML = `
-                        <span>${user.firstName || ''} ${user.lastName || ''} (${user.email}) - Last Login: ${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'} ${user.disabled ? '(Disabled)' : ''}</span>
-                        <div>
-                            <button class="edit-user">Edit</button>
-                            <button class="delete-user">Delete</button>
-                        </div>
-                    `;
-                    usersList.appendChild(userEl);
+                let sortColumn = 'lastName';
+                let sortDirection = 'asc';
+
+                const renderUsers = () => {
+                    usersList.innerHTML = '';
+                    
+                    // Sorting logic
+                    users.sort((a, b) => {
+                        let aVal = a[sortColumn] || '';
+                        let bVal = b[sortColumn] || '';
+                        if (sortDirection === 'asc') {
+                            return aVal.localeCompare(bVal);
+                        } else {
+                            return bVal.localeCompare(aVal);
+                        }
+                    });
+
+                    // Move current user to the top
+                    const currentUserIndex = users.findIndex(u => u.id === currentUser.id);
+                    if (currentUserIndex > -1) {
+                        const [currentUserData] = users.splice(currentUserIndex, 1);
+                        users.unshift(currentUserData);
+                    }
+
+                    users.forEach(user => {
+                        const userEl = document.createElement('div');
+                        userEl.classList.add('user-admin-row');
+                        if (user.disabled) {
+                            userEl.classList.add('disabled');
+                        }
+                        userEl.dataset.userId = user.id;
+                        const isCurrentUser = user.id === currentUser.id;
+                        
+                        userEl.innerHTML = `
+                            <div class="user-col-email">${user.email}</div>
+                            <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
+                            <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
+                            <div class="user-col-actions">
+                                <button class="edit-user">Edit</button>
+                                ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
+                            </div>
+                        `;
+                        usersList.appendChild(userEl);
+                    });
+                };
+
+                document.querySelectorAll('.user-admin-header .sortable').forEach(header => {
+                    header.addEventListener('click', () => {
+                        const newSortColumn = header.dataset.sort;
+                        if (sortColumn === newSortColumn) {
+                            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                        } else {
+                            sortColumn = newSortColumn;
+                            sortDirection = 'asc';
+                        }
+                        renderUsers();
+                    });
                 });
+
+                renderUsers();
             });
         
         usersList.addEventListener('click', (e) => {

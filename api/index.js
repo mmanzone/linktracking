@@ -101,16 +101,11 @@ initializeRedisData();
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(cookieParser());
 
-// Helper function to reliably get the base URL
+// Helper function to reliably get the base URL, removing any trailing slashes
 const getBaseUrl = (req) => {
-    // 1. Prioritize the BASE_URL environment variable if set
-    if (process.env.BASE_URL) {
-        return process.env.BASE_URL.replace(/\/$/, '');
-    }
-    // 2. Fallback to dynamic URL from request headers
+    const protocol = req.protocol || (req.headers.host.includes('localhost') ? 'http' : 'https');
     const host = req.headers.host;
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    return `${protocol}://${host}`;
+    return (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
 };
 
 const authenticate = async (req, res, next) => {
