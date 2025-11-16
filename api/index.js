@@ -173,7 +173,10 @@ app.post('/api/auth/login', async (req, res) => {
     const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
 
     try {
-      const baseUrl = (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
+      if (!process.env.BASE_URL) {
+        console.error('CRITICAL: BASE_URL environment variable is not set. Image URLs in emails will be broken.');
+      }
+      const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, ''); // Sanitize the base URL
       await resend.emails.send({
         from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
         to: email,
@@ -263,7 +266,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     
     if (sendWelcomeEmail) {
         try {
-            const baseUrl = (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
+            const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, '');
             await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
@@ -479,7 +482,7 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
     try {
         const host = req.headers.host;
         const protocol = host.includes('localhost') ? 'http' : 'https-';
-        const baseUrl = (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
+        const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, '');
         await resend.emails.send({
             from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
             to: email,
