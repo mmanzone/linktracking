@@ -173,7 +173,7 @@ app.post('/api/auth/login', async (req, res) => {
     const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
 
     try {
-      const baseUrl = (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
+      const baseUrl = process.env.BASE_URL.replace(/\/$/, '');
       await resend.emails.send({
         from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
         to: email,
@@ -188,7 +188,7 @@ app.post('/api/auth/login', async (req, res) => {
     <a href="${magicLink}" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
   </p>
   <p>This link will expire in 15 minutes. If you did not request this email, you can safely ignore it.</p>
-  <p>Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">Measure Your Impact</span></p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">- MEASURE YOUR IMPACT -</span></p>
   <hr style="border: none; border-top: 1px solid #eee;">
   <p style="font-size: 0.8em; color: #939598;">
     If you're having trouble with the button above, copy and paste the URL below into your web browser:<br>
@@ -265,7 +265,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
         try {
             const host = req.headers.host;
             const protocol = host.includes('localhost') ? 'http' : 'https';
-            const baseUrl = (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
+            const baseUrl = process.env.BASE_URL.replace(/\/$/, '');
             await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
@@ -280,7 +280,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
-  <p>Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">Measure Your Impact</span></p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">- MEASURE YOUR IMPACT -</span></p>
 </div>
 `,
             });
@@ -481,7 +481,7 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
     try {
         const host = req.headers.host;
         const protocol = host.includes('localhost') ? 'http' : 'https';
-        const baseUrl = process.env.BASE_URL || `${protocol}://${host}`;
+        const baseUrl = process.env.BASE_URL.replace(/\/$/, '');
         await resend.emails.send({
             from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
             to: email,
@@ -494,7 +494,7 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login?invited=true" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Activate Your Account</a>
   </p>
-  <p>Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">Measure Your Impact</span></p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team<br><span style="font-size: 0.8em; color: #939598;">- MEASURE YOUR IMPACT -</span></p>
 </div>
 `,
         });
