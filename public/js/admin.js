@@ -28,23 +28,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const namePrompt = document.createElement('div');
                 namePrompt.classList.add('name-prompt');
                 namePrompt.innerHTML = `
-                    <p>Please provide your name for a more personalized experience:</p>
-                    <input type="text" id="first-name-input" placeholder="First Name" value="${currentUser.firstName || ''}">
-                    <input type="text" id="last-name-input" placeholder="Last Name" value="${currentUser.lastName || ''}">
-                    <button id="save-name-btn">Save Name</button>
+                    <form id="name-prompt-form">
+                        <p>Please provide your name for a more personalized experience:</p>
+                        <input type="text" id="firstName-prompt" placeholder="First Name" value="${currentUser.firstName || ''}" required>
+                        <input type="text" id="lastName-prompt" placeholder="Last Name" value="${currentUser.lastName || ''}" required>
+                        <button id="save-name-btn" type="submit">Save Name</button>
+                    </form>
                 `;
                 adminPanelDiv.prepend(namePrompt);
 
-                document.getElementById('save-name-btn').addEventListener('click', () => {
-                    const firstName = document.getElementById('first-name-input').value;
-                    const lastName = document.getElementById('last-name-input').value;
+                document.getElementById('name-prompt-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const firstName = document.getElementById('firstName-prompt').value;
+                    const lastName = document.getElementById('lastName-prompt').value;
 
-                    fetch('/api/users/me', {
-                        method: 'PATCH',
+                    if (!firstName || !lastName) {
+                        alert('Please enter your first and last name.');
+                        return;
+                    }
+
+                    const body = { ...currentUser, firstName, lastName };
+                    
+                    fetch(`/api/users/${currentUser.id}`, {
+                        method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ firstName, lastName })
-                    })
-                    .then(() => {
+                        body: JSON.stringify(body)
+                    }).then(() => {
                         currentUser.firstName = firstName;
                         currentUser.lastName = lastName;
                         document.getElementById('logout-btn').textContent = `Logout ${firstName} ${lastName}`;
@@ -908,7 +917,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
                             <div class="button-container">
                                 <button class="save-edit-campaign">Save</button>
-                                <button class="cancel-edit-campaign">Cancel</button>
+                                <button class="cancel-edit">Cancel</button>
                             </div>
                         </div>
                     `;
