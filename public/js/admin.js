@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         adminContentDiv.innerHTML = `
             <div id="users-tab" class="tab-content active">
-                <h2>User Management</h2>
+                <h2>Users Management</h2>
                 <div id="users-list-container">
                     <div class="user-admin-header">
                         <div class="user-col-email sortable" data-sort="email">email</div>
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const isCurrentUser = user.id === currentUser.id;
                         
                         userEl.innerHTML = `
-                            <div class="user-col-email">${user.email}</div>
+                            <div class="user-col-email"><b>${user.email}<b></div>
                             <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
                             <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
                             <div class="user-col-status">
@@ -334,10 +334,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="tenants-tab" class="tab-content active">
                 <h2>Tenant Management</h2>
                 <div id="tenants-list"></div>
-                <h3>Create New Tenant</h3>
+                <h3>Create a New Organisation/Tenant</h3>
                 <form id="create-tenant-form">
+                    <label>Organisation Full Name: <input type="text" id="tenant-display-name-input" required></label>
                     <label>Tenant Name (for URL, e.g., 'my-company'): <input type="text" id="tenant-name-input" required></label>
-                    <label>Display Name: <input type="text" id="tenant-display-name-input" required></label>
                     <label>Admin Email: <input type="email" id="tenant-email-input" required></label>
                     <label><input type="checkbox" id="send-welcome-email-checkbox" checked> Send welcome email</label>
                     <button type="submit">Create Tenant</button>
@@ -471,12 +471,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div>
                         <p>Standard</p>
                         <div id="qrcode-standard"></div>
-                        <button id="download-standard">Download</button>
+                        <button id="download-standard">Download Standard</button>
                     </div>
                     <div>
                         <p>With Logo</p>
                         <div id="qrcode-logo"></div>
-                        <button id="download-logo">Download</button>
+                        <button id="download-logo">Download with Logo</button>
                     </div>
                 </div>
             </div>
@@ -679,7 +679,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div>Logo</div>
                     <div>Link Name</div>
                     <div>Link Address</div>
-                    <div style="text-align: right;">Actions</div>
+                    <div>Show</div>
+                    <div>Actions</div>
                 </div>
                 <div id="links-list"></div>
                 <button id="add-link">Add New Link</button>
@@ -868,6 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </select>
                     </label>
                 </div>
+                <br>
                 <div id="campaigns-list"></div>
                 <button id="add-campaign">Add New Campaign</button>
             </div>
@@ -1019,8 +1021,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     campaignAdmin.innerHTML = `
                         <div style="width: 100%;">
                             <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
-                            <label>Admin Description: <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
-                            <label>Banner Message: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40" style="width: 100%;"></label>
+                            <label>Internal Description (not visible to visitors): <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
+                            <label>Banner Message for visitors: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40" style="width: 100%;"></label>
                             <div style="display: flex; gap: 10px;">
                                 <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
                                 <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
