@@ -298,11 +298,11 @@ input, textarea {
 }
 
 .link-admin {
-    grid-template-columns: 40px 80px 1fr 2fr 120px 80px;
+    grid-template-columns: 40px 80px 1fr 2fr 80px 80px;
 }
 .link-admin-header {
     display: grid;
-    grid-template-columns: 40px 80px 1fr 2fr 120px 80px;
+    grid-template-columns: 40px 80px 1fr 2fr 80px 80px;
     gap: 10px;
     padding: 10px;
     font-weight: bold;
@@ -325,13 +325,13 @@ input, textarea {
 }
 .campaign-links-edit .campaign-link-row {
     display: grid;
-    grid-template-columns: 40px 100px 1fr;
+    grid-template-columns: 40px 60px 1fr;
 }
 .campaign-links-header {
     display: grid;
-    grid-template-columns: 40px 100px 1fr;
+    grid-template-columns: 40px 60px 1fr;
 }
 
 .user-admin-header, .user-admin-row {
-    grid-template-columns: 2fr 2fr 1.5fr 120px;
+    grid-template-columns: 2fr 2fr 1.5fr 80px 120px;
 }

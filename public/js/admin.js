@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="user-col-email sortable" data-sort="email">email</div>
                         <div class="user-col-name sortable" data-sort="firstName">First and last name</div>
                         <div class="user-col-login sortable" data-sort="lastLogin">Last connetion</div>
+                        <div class="user-col-status">Status</div>
                         <div class="user-col-actions">Actions</div>
                     </div>
                     <div id="users-list"></div>
@@ -195,6 +196,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="user-col-email">${user.email}</div>
                             <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
                             <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
+                            <div class="user-col-status">
+                                <label class="switch">
+                                    <input type="checkbox" class="disable-user-toggle" ${user.disabled ? '' : 'checked'}>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
                             <div class="user-col-actions">
                                 <button class="edit-user">Edit</button>
                                 ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
@@ -239,12 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
                             <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
                         </div>
-                        <div class="user-col-login">
-                             <label class="switch">
-                                <input type="checkbox" class="edit-disabled" ${user.disabled ? '' : 'checked'}>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
+                        <div class="user-col-login"></div>
+                        <div class="user-col-status"></div>
                         <div class="user-col-actions">
                             <button class="save-user" data-id="${user.id}">Save</button>
                             <button class="cancel-edit">Cancel</button>
@@ -669,10 +672,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="move-up" ${index === 0 ? 'disabled' : ''}>▲</button>
                     <button class="move-down" ${index === config.links.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
-                <div>
+                <div style="text-align: center;">
                     <img src="${link.icon}" style="width: 64px; height: 64px; vertical-align: middle;">
                     <input type="file" class="link-icon-upload" style="display: none;">
-                    <button class="change-icon" title="Change Icon" style="padding: 5px;">
+                    <button class="change-icon" title="Change Icon" style="padding: 5px; display: block; margin: 5px auto 0;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     </button>
                 </div>
