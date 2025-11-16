@@ -103,9 +103,13 @@ app.use(cookieParser());
 
 // Helper function to reliably get the base URL, removing any trailing slashes
 const getBaseUrl = (req) => {
-    const protocol = req.protocol || (req.headers.host.includes('localhost') ? 'http' : 'https');
-    const host = req.headers.host;
-    return (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
+    const baseUrl = process.env.BASE_URL;
+    if (!baseUrl) {
+        console.error('CRITICAL: BASE_URL environment variable is not set. Image and login URLs in emails will be broken.');
+        // Return a placeholder to avoid crashing, but the links will be broken.
+        return 'http://-'; 
+    }
+    return baseUrl.replace(/\/$/, '');
 };
 
 const authenticate = async (req, res, next) => {
