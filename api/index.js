@@ -5,9 +5,21 @@ const { Redis } = require('@upstash/redis');
 const { put } = require('@vercel/blob');
 const jwt = require('jsonwebtoken');
 const { Resend } = require('resend');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Read the logo file and convert it to base64 once on server startup
+let logoDataUri = '';
+try {
+    const logoPath = path.join(process.cwd(), 'public', 'images', 'linkreachxyz-logo.png');
+    const logoBuffer = fs.readFileSync(logoPath);
+    logoDataUri = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+} catch (error) {
+    console.error('CRITICAL: Could not read logo file for emails.', error);
+}
 
 // --- Upstash Redis Client Setup ---
 const redis = new Redis({
@@ -192,7 +204,7 @@ app.post('/api/auth/login', async (req, res) => {
         subject: 'Your Login Link for linkreach.xyz',
         html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${baseUrl}/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+  <img src="${logoDataUri}" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
   <h2>Log in to your account</h2>
   <p>Hello,</p>
   <p>You requested a link to log in to your account. Click the button below to sign in.</p>
@@ -282,7 +294,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
                 subject: `Welcome to linkreach.xyz, ${displayName}!`,
                 html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${baseUrl}/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+  <img src="${logoDataUri}" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
   <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
   <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
@@ -496,7 +508,7 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
             subject: `You've been invited to ${tenant.displayName} on linkreach.xyz`,
             html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
-  <img src="${baseUrl}/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
+  <img src="${logoDataUri}" alt="linkreach.xyz logo" style="max-width: 300px; margin-bottom: 20px;">
   <h2>You've been invited!</h2>
   <p>You have been invited to join the "${tenant.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
   <p style="margin: 20px 0;">
