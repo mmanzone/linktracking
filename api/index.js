@@ -173,7 +173,7 @@ app.post('/api/auth/login', async (req, res) => {
     const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
 
     try {
-      const baseUrl = process.env.BASE_URL.replace(/\/$/, '');
+      const baseUrl = (process.env.BASE_URL || `${protocol}://${host}`).replace(/\/$/, '');
       await resend.emails.send({
         from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
         to: email,
