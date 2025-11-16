@@ -243,12 +243,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch(userApiUrl).then(res => res.json()).then(users => {
                     const user = users.find(u => u.id === userId);
                     row.innerHTML = `
-                        <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
-                        <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
-                        <input type="email" class="edit-email" value="${user.email}">
-                        <label><input type="checkbox" class="edit-disabled" ${user.disabled ? 'checked' : ''}> Disabled</label>
-                        <button class="save-user" data-id="${user.id}">Save</button>
-                        <button class="cancel-edit">Cancel</button>
+                        <div class="user-col-email"><input type="email" class="edit-email" value="${user.email}"></div>
+                        <div class="user-col-name">
+                            <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
+                            <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
+                        </div>
+                        <div class="user-col-login">
+                             <label class="switch">
+                                <input type="checkbox" class="edit-disabled" ${user.disabled ? 'checked' : ''}>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="user-col-actions">
+                            <button class="save-user" data-id="${user.id}">Save</button>
+                            <button class="cancel-edit">Cancel</button>
+                        </div>
                     `;
                 });
             }
