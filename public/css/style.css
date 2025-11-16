@@ -111,8 +111,9 @@ header {
 
 /* Admin Panel Specifics */
 .admin-container {
-    width: 100%;
-    max-width: 960px;
+    width: 95%;
+    max-width: 1400px;
+    margin: 20px auto;
     position: relative;
     padding-bottom: 60px; /* Space for the logout button */
 }
@@ -260,9 +261,28 @@ h2 {
 
 .admin-header {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.admin-header-row1 {
+    display: flex;
     align-items: center;
-    width: 100%;
+    gap: 15px;
+}
+
+.admin-header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.admin-header h2 {
+    font-size: 1.2rem;
+    margin: 10px 0 0 0;
+    color: #6c757d;
 }
 
 .admin-controls {

@@ -101,6 +101,18 @@ initializeRedisData();
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(cookieParser());
 
+// Helper function to reliably get the base URL
+const getBaseUrl = (req) => {
+    // 1. Prioritize the BASE_URL environment variable if set
+    if (process.env.BASE_URL) {
+        return process.env.BASE_URL.replace(/\/$/, '');
+    }
+    // 2. Fallback to dynamic URL from request headers
+    const host = req.headers.host;
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    return `${protocol}://${host}`;
+};
+
 const authenticate = async (req, res, next) => {
   const token = req.cookies.session_token;
 
@@ -173,10 +185,7 @@ app.post('/api/auth/login', async (req, res) => {
     const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
 
     try {
-      if (!process.env.BASE_URL) {
-        console.error('CRITICAL: BASE_URL environment variable is not set. Image URLs in emails will be broken.');
-      }
-      const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, ''); // Sanitize the base URL
+      const baseUrl = getBaseUrl(req);
       await resend.emails.send({
         from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
         to: email,
@@ -266,7 +275,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     
     if (sendWelcomeEmail) {
         try {
-            const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, '');
+            const baseUrl = getBaseUrl(req);
             await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
@@ -480,9 +489,7 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
 
     // Send invite email
     try {
-        const host = req.headers.host;
-        const protocol = host.includes('localhost') ? 'http' : 'https-';
-        const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, '');
+        const baseUrl = getBaseUrl(req);
         await resend.emails.send({
             from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
             to: email,

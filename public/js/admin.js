@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = data.user;
             currentTenant = data.tenant;
             
-            document.getElementById('admin-title').textContent = `${currentTenant.displayName} - Admin Panel`;
+            document.getElementById('admin-title').textContent = currentTenant.displayName;
             document.getElementById('logout-btn').textContent = `Logout ${currentUser.firstName || ''} ${currentUser.lastName || ''}`;
             
             // Prompt for name if missing
