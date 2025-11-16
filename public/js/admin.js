@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="user-col-login">
                              <label class="switch">
-                                <input type="checkbox" class="edit-disabled" ${user.disabled ? 'checked' : ''}>
+                                <input type="checkbox" class="edit-disabled" ${user.disabled ? '' : 'checked'}>
                                 <span class="slider round"></span>
                             </label>
                         </div>
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     firstName: row.querySelector('.edit-firstName').value,
                     lastName: row.querySelector('.edit-lastName').value,
                     email: row.querySelector('.edit-email').value,
-                    disabled: row.querySelector('.edit-disabled').checked
+                    disabled: !row.querySelector('.edit-disabled').checked
                 };
                 fetch(`/api/users/${userId}`, {
                     method: 'PUT',
@@ -665,14 +665,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             linkElement.dataset.id = link.id;
             linkElement.innerHTML = `
-                <div class="link-order">
+                <div class="link-order" style="padding: 2px;">
                     <button class="move-up" ${index === 0 ? 'disabled' : ''}>▲</button>
                     <button class="move-down" ${index === config.links.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
                 <div>
                     <img src="${link.icon}" style="width: 64px; height: 64px; vertical-align: middle;">
                     <input type="file" class="link-icon-upload" style="display: none;">
-                    <button class="change-icon" title="Change Icon">
+                    <button class="change-icon" title="Change Icon" style="padding: 5px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     </button>
                 </div>
@@ -961,7 +961,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="move-link-up">▲</button>
                                 <button class="move-link-down">▼</button>
                             </div>
-                            <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                            <label class="switch" style="width: auto;">
+                                <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                                <span class="slider round"></span>
+                            </label>
                             <div class="link">
                                 <img src="${link.icon}" alt="${link.text}" style="height: 64px;">
                                 <span>${link.text}</span>

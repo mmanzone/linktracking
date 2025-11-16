@@ -8,10 +8,11 @@
 </head>
 <body>
     <div class="main-container">
-        <img src="/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="height: 50px; position: absolute; top: 20px; left: 20px;">
         <div class="homepage-container">
+            <div id="error-message" class="message error" style="display: none;"></div>
             <header class="homepage-header">
-                <h1>linkreach.xyz: Track Your Impact</h1>
+                <img src="/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="height: 75px; margin-bottom: 20px;">
+                <h1>LinkReach - Track Your Impact</h1>
                 <h2>Connect Your Community. Measure Your Mission.</h2>
                 <p>The dedicated link hub for NFPs and Local Communities. Easily create custom landing pages and QR codes to share essential information while proving your reach.</p>
             </header>
@@ -57,5 +58,13 @@
             <a href="#">About Us</a>
         </footer>
     </div>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('error') === 'not_found') {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = 'This account does not exist.';
+            errorDiv.style.display = 'block';
+        }
+    </script>
 </body>
 </html>
