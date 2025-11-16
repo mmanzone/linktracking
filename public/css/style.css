@@ -268,3 +268,70 @@ input, textarea {
 .login-container header h1 {
     color: var(--cool-blue);
 }
+
+.name-prompt {
+    background-color: var(--info-bg);
+    color: var(--info-text);
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.theme-setting {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.theme-setting label {
+    flex-shrink: 0;
+}
+.theme-setting input[type="color"] {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    vertical-align: middle;
+}
+.theme-setting input[type="text"] {
+    width: 100px;
+}
+
+.link-admin {
+    grid-template-columns: 40px 80px 1fr 2fr 120px 80px;
+}
+.link-admin-header {
+    display: grid;
+    grid-template-columns: 40px 80px 1fr 2fr 120px 80px;
+    gap: 10px;
+    padding: 10px;
+    font-weight: bold;
+    border-bottom: 1px solid var(--border-color);
+}
+.link-admin-header div {
+    text-align: center;
+}
+.link-admin-header div:nth-child(3),
+.link-admin-header div:nth-child(4) {
+    text-align: left;
+}
+
+
+.campaign-links-edit .link-order {
+    width: 40px;
+}
+.campaign-links-edit .link {
+    width: auto;
+}
+.campaign-links-edit .campaign-link-row {
+    display: grid;
+    grid-template-columns: 40px 100px 1fr;
+}
+.campaign-links-header {
+    display: grid;
+    grid-template-columns: 40px 100px 1fr;
+}
+
+.user-admin-header, .user-admin-row {
+    grid-template-columns: 2fr 2fr 1.5fr 120px;
+}

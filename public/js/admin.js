@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminPanelDiv = document.getElementById('admin-panel');
     const adminContentDiv = document.getElementById('admin-content');
     const tabsContainer = document.querySelector('.tabs');
-    const tenantSwitcher = document.getElementById('tenant-switcher');
     const logoutBtn = document.getElementById('logout-btn');
 
     let currentTenant = null;
@@ -26,10 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Prompt for name if missing
             if (!currentUser.firstName || !currentUser.lastName) {
                 const namePrompt = document.createElement('div');
-                namePrompt.classList.add('name-prompt');
+                namePrompt.classList.add('name-prompt', 'message', 'info');
                 namePrompt.innerHTML = `
                     <form id="name-prompt-form">
-                        <p>Please provide your name for a more personalized experience:</p>
+                        <p>Please provide your name for a more personalised experience:</p>
                         <input type="text" id="firstName-prompt" placeholder="First Name" value="${currentUser.firstName || ''}" required>
                         <input type="text" id="lastName-prompt" placeholder="Last Name" value="${currentUser.lastName || ''}" required>
                         <button id="save-name-btn" type="submit">Save Name</button>
@@ -82,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 tabsContainer.appendChild(usersTab);
             }
             
-            // Re-add event listeners to tabs
             const tabs = document.querySelectorAll('.tab-link');
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
@@ -103,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function loadAdminContent(tab) {
-        // We need the config for most tabs, but not for the tenants tab
         if (tab === 'tenants') {
             renderTenantsTab();
             return;
@@ -129,9 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'analytics':
                         renderAnalyticsTab(config);
                         break;
-                    case 'users':
-                        renderUsersTab();
-                        break;
                 }
             });
     }
@@ -145,9 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>User Management</h2>
                 <div id="users-list-container">
                     <div class="user-admin-header">
-                        <div class="user-col-email sortable" data-sort="email">Email</div>
-                        <div class="user-col-name sortable" data-sort="firstName">First & Last Name</div>
-                        <div class="user-col-login sortable" data-sort="lastLogin">Last Login</div>
+                        <div class="user-col-email sortable" data-sort="email">email</div>
+                        <div class="user-col-name sortable" data-sort="firstName">First and last name</div>
+                        <div class="user-col-login sortable" data-sort="lastLogin">Last connetion</div>
                         <div class="user-col-actions">Actions</div>
                     </div>
                     <div id="users-list"></div>
@@ -173,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const renderUsers = () => {
                     usersList.innerHTML = '';
                     
-                    // Sorting logic
                     users.sort((a, b) => {
                         let aVal = a[sortColumn] || '';
                         let bVal = b[sortColumn] || '';
@@ -184,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
 
-                    // Move current user to the top
                     const currentUserIndex = users.findIndex(u => u.id === currentUser.id);
                     if (currentUserIndex > -1) {
                         const [currentUserData] = users.splice(currentUserIndex, 1);
@@ -195,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const userEl = document.createElement('div');
                         userEl.classList.add('user-admin-row');
                         if (user.disabled) {
-                            userEl.classList.add('disabled');
+                            userEl.classList.add('inactive');
                         }
                         userEl.dataset.userId = user.id;
                         const isCurrentUser = user.id === currentUser.id;
@@ -273,7 +265,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
-                }).then(() => loadAdminContent('users'));
+                }).then(() => {
+                    const button = e.target;
+                    button.classList.add('success');
+                    button.textContent = 'Saved!';
+                    setTimeout(() => {
+                        loadAdminContent('users');
+                    }, 1000);
+                });
             }
             if (e.target.classList.contains('cancel-edit')) {
                 loadAdminContent('users');
@@ -398,36 +397,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="button-container"><button id="save-content">Save Content</button></div>
                 
                 <h2>Theme</h2>
-                <label>Background Color: 
-                    <input type="color" id="bg-color-picker" value="${config.theme.backgroundColor || '#f0f2f5'}">
-                    <input type="text" id="bg-color-input" value="${config.theme.backgroundColor || '#f0f2f5'}" size="7">
-                </label><br>
-                <label>Container Color: 
-                    <input type="color" id="container-color-picker" value="${config.theme.containerColor || '#ffffff'}">
-                    <input type="text" id="container-color-input" value="${config.theme.containerColor || '#ffffff'}" size="7">
-                </label><br>
-                <label>Primary Color (Header): 
-                    <input type="color" id="primary-color-picker" value="${config.theme.primaryColor}">
-                    <input type="text" id="primary-color-input" value="${config.theme.primaryColor}" size="7">
-                </label>
-                <label>Text Color: 
-                    <input type="color" id="primary-text-color-picker" value="${config.theme.primaryTextColor || '#000000'}">
-                    <input type="text" id="primary-text-color-input" value="${config.theme.primaryTextColor || '#000000'}" size="7">
-                </label><br>
-                <label>Secondary Color (Links): 
-                    <input type="color" id="secondary-color-picker" value="${config.theme.secondaryColor}">
-                    <input type="text" id="secondary-color-input" value="${config.theme.secondaryColor}" size="7">
-                </label>
-                <label>Text Color: 
-                    <input type="color" id="secondary-text-color-picker" value="${config.theme.secondaryTextColor || '#000000'}">
-                    <input type="text" id="secondary-text-color-input" value="${config.theme.secondaryTextColor || '#000000'}" size="7">
-                </label><br>
+                <div class="theme-setting">
+                    <label>Background Color: 
+                        <input type="color" id="bg-color-picker" value="${config.theme.backgroundColor || '#f0f2f5'}">
+                        <input type="text" id="bg-color-input" value="${config.theme.backgroundColor || '#f0f2f5'}" size="7">
+                    </label>
+                </div>
+                <div class="theme-setting">
+                    <label>Container Color: 
+                        <input type="color" id="container-color-picker" value="${config.theme.containerColor || '#ffffff'}">
+                        <input type="text" id="container-color-input" value="${config.theme.containerColor || '#ffffff'}" size="7">
+                    </label>
+                </div>
+                <div class="theme-setting">
+                    <label>Primary Color (Header): 
+                        <input type="color" id="primary-color-picker" value="${config.theme.primaryColor}">
+                        <input type="text" id="primary-color-input" value="${config.theme.primaryColor}" size="7">
+                    </label>
+                    <label>Text Color: 
+                        <input type="color" id="primary-text-color-picker" value="${config.theme.primaryTextColor || '#000000'}">
+                        <input type="text" id="primary-text-color-input" value="${config.theme.primaryTextColor || '#000000'}" size="7">
+                    </label>
+                </div>
+                <div class="theme-setting">
+                    <label>Secondary Color (Links): 
+                        <input type="color" id="secondary-color-picker" value="${config.theme.secondaryColor}">
+                        <input type="text" id="secondary-color-input" value="${config.theme.secondaryColor}" size="7">
+                    </label>
+                    <label>Text Color: 
+                        <input type="color" id="secondary-text-color-picker" value="${config.theme.secondaryTextColor || '#000000'}">
+                        <input type="text" id="secondary-text-color-input" value="${config.theme.secondaryTextColor || '#000000'}" size="7">
+                    </label>
+                </div>
                 <div class="button-container"><button id="save-theme">Save Theme</button></div>
 
                 <h2>Social Links</h2>
                 <div id="social-links-admin"></div>
                 <button id="add-social-link">Add Social Link</button>
-                                                <div class="button-container"><button id="save-social-links">Save Social Links</button></div>
+                <div class="button-container"><button id="save-social-links">Save Social Links</button></div>
 
                 <h2>QR Codes</h2>
                 <div style="display: flex; gap: 20px;">
@@ -445,10 +452,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // QR Code Generation
         const tenantUrl = `${window.location.origin}/${currentTenant.name}`;
         
-        // Standard QR Code
         new QRCode(document.getElementById("qrcode-standard"), {
             text: tenantUrl,
             width: 256,
@@ -458,9 +463,8 @@ document.addEventListener('DOMContentLoaded', () => {
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        // QR Code with Logo (Manual Composition)
         const qrLogoContainer = document.getElementById("qrcode-logo");
-        qrLogoContainer.innerHTML = ''; // Clear previous content
+        qrLogoContainer.innerHTML = ''; 
 
         new QRCode(qrLogoContainer, {
             text: tenantUrl,
@@ -471,7 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
             correctLevel: QRCode.CorrectLevel.H
         });
 
-        // Manually draw the logo onto the canvas to avoid tainting
         const canvas = qrLogoContainer.querySelector('canvas');
         if (canvas) {
             const ctx = canvas.getContext('2d');
@@ -482,18 +485,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const logoX = (256 - logoSize) / 2;
                 const logoY = (256 - logoSize) / 2;
                 
-                // Draw a white background behind the logo for clarity
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(logoX, logoY, logoSize, logoSize);
                 
-                // Draw the logo image
                 ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
             };
             logoImg.src = config.logo;
         }
 
-
-        // Add Download Buttons
         document.getElementById('download-standard').addEventListener('click', () => {
             const canvas = document.querySelector('#qrcode-standard canvas');
             if (canvas) {
@@ -514,7 +513,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
 
-        // Theme color pickers synchronization
         const syncColorInputs = (pickerId, inputId) => {
             const picker = document.getElementById(pickerId);
             const input = document.getElementById(inputId);
@@ -557,10 +555,10 @@ document.addEventListener('DOMContentLoaded', () => {
             socialLinksAdmin.appendChild(linkEl);
         });
 
-        document.getElementById('add-social-link').addEventListener('click', () => {
+        document.getElementById('add-social-link').addEventListener('click', (e) => {
             const newConfig = { ...config };
             newConfig.socialLinks.push({ name: 'facebook', url: '' });
-            saveConfig(newConfig).then(() => renderGeneralTab(newConfig));
+            saveConfig(newConfig, e.target).then(() => renderGeneralTab(newConfig));
         });
 
         socialLinksAdmin.addEventListener('click', (e) => {
@@ -568,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const index = parseInt(e.target.dataset.index, 10);
                 const newConfig = { ...config };
                 newConfig.socialLinks.splice(index, 1);
-                saveConfig(newConfig).then(() => renderGeneralTab(newConfig));
+                saveConfig(newConfig, e.target).then(() => renderGeneralTab(newConfig));
             }
         });
 
@@ -621,8 +619,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!data.url) throw new Error('Upload failed, no URL returned.');
                         newConfig.logo = data.url;
                         saveConfig(newConfig, saveButton).then(() => {
-                            newLogoFile = null; // Reset after successful save
-                            loadAdminContent('general'); // Reload to update QR code
+                            newLogoFile = null; 
+                            loadAdminContent('general'); 
                         });
                     })
                     .catch(error => {
@@ -633,7 +631,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 reader.readAsDataURL(newLogoFile);
             } else {
-                // No new logo, just save the text content and existing logo URL
                 newConfig.logo = document.getElementById('logo-preview').src;
                 saveConfig(newConfig, saveButton);
             }
@@ -647,6 +644,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p style="font-size: 0.9rem; color: #606770;">
                     This is the library of links available on this platform. You can choose the order you want them to be displayed and where they will redirect the visitor. You can hide a link from the portal, e.g. for a link that's only seasonal or temporary. You can also create campaigns to show only a specific set of links during a specified period; this way you can make the list of links relevant to the event/campaign you are participating in.
                 </p>
+                <div class="link-admin-header">
+                    <div>Move</div>
+                    <div>Logo</div>
+                    <div>Link Name</div>
+                    <div>Link Address</div>
+                    <div style="text-align: right;">Actions</div>
+                </div>
                 <div id="links-list"></div>
                 <button id="add-link">Add New Link</button>
             </div>
@@ -657,6 +661,9 @@ document.addEventListener('DOMContentLoaded', () => {
         config.links.forEach((link, index) => {
             const linkElement = document.createElement('div');
             linkElement.classList.add('link-admin');
+            if (!link.visible) {
+                linkElement.classList.add('inactive');
+            }
             linkElement.dataset.id = link.id;
             linkElement.innerHTML = `
                 <div class="link-order">
@@ -664,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="move-down" ${index === config.links.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
                 <div>
-                    <img src="${link.icon}" style="width: 40px; height: 40px; vertical-align: middle;">
+                    <img src="${link.icon}" style="width: 64px; height: 64px; vertical-align: middle;">
                     <input type="file" class="link-icon-upload" style="display: none;">
                     <button class="change-icon" title="Change Icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -672,7 +679,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <input type="text" class="link-text-edit" value="${link.text}" placeholder="Link Name">
                 <input type="text" class="link-url-edit" value="${link.url}" placeholder="https://...">
-                <button class="hide-link">${link.visible ? 'Hide' : 'Show'}</button>
+                <label class="switch">
+                    <input type="checkbox" class="hide-link-toggle" ${link.visible ? 'checked' : ''}>
+                    <span class="slider round"></span>
+                </label>
                 <button class="delete-link">Delete</button>
             `;
             linksList.appendChild(linkElement);
@@ -713,8 +723,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveConfig(newConfig, event.target).then(() => loadAdminContent('links'));
             }
 
-            if (event.target.classList.contains('hide-link')) {
-                newConfig.links[linkIndex].visible = !newConfig.links[linkIndex].visible;
+            if (event.target.classList.contains('hide-link-toggle')) {
+                newConfig.links[linkIndex].visible = event.target.checked;
                 saveConfig(newConfig).then(() => loadAdminContent('links'));
             }
 
@@ -735,7 +745,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const content = e.target.result.split(',')[1];
-                        // Provide visual feedback during upload
                         const originalHtml = linkAdmin.innerHTML;
                         linkAdmin.innerHTML += '<div class="upload-indicator">Uploading...</div>';
 
@@ -758,7 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         .catch(error => {
                             console.error('Icon upload failed:', error);
                             alert('Icon upload failed. Please check the console for details.');
-                            linkAdmin.innerHTML = originalHtml; // Restore original content on failure
+                            linkAdmin.innerHTML = originalHtml; 
                         });
                     };
                     reader.readAsDataURL(file);
@@ -865,7 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         
-        document.getElementById('add-campaign').addEventListener('click', () => {
+        document.getElementById('add-campaign').addEventListener('click', (e) => {
             fetch('/api/admin/config').then(res => res.json()).then(config => {
                 const newConfig = { ...config };
                 const startDate = new Date();
@@ -880,9 +889,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     message: '',
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
-                    links: config.links.map(l => l.id) // Default to all links
+                    links: config.links.map(l => l.id) 
                 });
-                saveConfig(newConfig).then(() => loadAdminContent('campaigns'));
+                saveConfig(newConfig, e.target).then(() => loadAdminContent('campaigns'));
             });
         });
         
@@ -906,9 +915,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         alert('Error: End date cannot be before the start date.');
                         return;
                     }
-                    newEndDate.setHours(23, 59, 59, 999); // Set to end of day
+                    newEndDate.setHours(23, 59, 59, 999); 
 
-                    // Overlap check
                     const overlaps = newConfig.campaigns.some(c => {
                         if (c.id === campaignId) return false;
                         const existingStart = new Date(c.startDate);
@@ -942,7 +950,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (event.target.classList.contains('edit-campaign')) {
                     const campaignAdmin = event.target.closest('.campaign-admin');
                     
-                    // Correctly sort links: ordered campaign links first, then the rest
                     const campaignLinkIds = new Set(campaign.links);
                     const sortedLinksForCampaign = [
                         ...campaign.links.map(id => config.links.find(l => l.id === id)).filter(Boolean),
@@ -956,8 +963,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="move-link-down">▼</button>
                             </div>
                             <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
-                            <div class="link" style="background-color: ${config.theme.secondaryColor}; color: ${config.theme.secondaryTextColor || 'black'};">
-                                <img src="${link.icon}" alt="${link.text}">
+                            <div class="link">
+                                <img src="${link.icon}" alt="${link.text}" style="height: 64px;">
                                 <span>${link.text}</span>
                             </div>
                         </div>
@@ -1063,399 +1070,127 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                         });
                 }
-
-                if (event.target.classList.contains('delete-campaign')) {
-                    if (confirm('Are you sure you want to delete this campaign?')) {
-                        fetch('/api/admin/config').then(res => res.json()).then(config => {
-                            let newConfig = { ...config };
-                            newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
-                            saveConfig(newConfig).then(() => loadAdminContent('campaigns'));
-                        });
-                    }
-                }
             });
         });
     }
 
     function renderAnalyticsTab(config) {
-        let tenantFilter = '';
-        if (currentUser.role === 'master-admin') {
-            tenantFilter = `
-                <select id="tenant-analytics-filter">
-                    <option value="">All Tenants</option>
-                </select>
-            `;
-        }
-
         adminContentDiv.innerHTML = `
             <div id="analytics-tab" class="tab-content active">
                 <h2>Analytics</h2>
                 <p style="font-size: 0.9rem; color: #606770;">
-                    Shows the total number of visitors to the landing page, i.e. people who have opened the landing page using the QR code or not. "Abandoned" shows people who did not go further than the landing page and didn't click on a link. "Followed links" show the actual link or links they followed. One visitor might click on multiple links. 
-                    You can choose to see the results per day using the date filter, or per specific campaign (those will filter by campaign date automatically). If you want the total number of the period, instead of a day-by-day breakdown, click the "Cumulative" checkbox. 
-                    The visitors by hour show the time of the day the visitor opened the page, cumulative over the days in the time period. This highlights the busier engagement period during a campaign for example.
+                    Here you can find the analytics data for your tenant. Use the filters to select the data you want to see.
                 </p>
-                <div id="analytics-filters" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                    ${tenantFilter}
-                    <select id="date-filter">
-                        <option value="30">Last 30 days</option>
-                        <option value="7">Last 7 days</option>
-                        <option value="1">Today</option>
-                        <option value="yesterday">Yesterday</option>
-                        <option value="90">Last 3 months</option>
-                        <option value="180">Last 6 months</option>
-                        <option value="365">Last 12 months</option>
-                        <option value="all">All time</option>
-                    </select>
-                    <select id="campaign-filter"></select>
-                    <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
-                    <button id="export-analytics">Export Graphs</button>
-                    <button id="refresh-analytics" title="Refresh Data">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                    </button>
+                <div id="analytics-filters">
+                    <label>Tenant: 
+                        <select id="tenant-filter">
+                            <option value="">All Tenants</option>
+                        </select>
+                    </label>
+                    <label>Campaign: 
+                        <select id="campaign-filter">
+                            <option value="">All Campaigns</option>
+                        </select>
+                    </label>
+                    <label>Date Range: 
+                        <input type="date" id="start-date-filter">
+                        to
+                        <input type="date" id="end-date-filter">
+                    </label>
+                    <button id="apply-filters">Apply Filters</button>
                 </div>
-                <div id="analytics-charts">
-                    <h3>Visitor Engagement</h3>
-                    <div style="height: 200px; margin-bottom: 20px;"><canvas id="visits-chart"></canvas></div>
-                    <h3>Clicks per Link</h3>
-                    <div style="height: 400px; margin-bottom: 20px;"><canvas id="clicks-chart"></canvas></div>
-                    <h3>Visitors by Hour</h3>
-                    <div style="height: 300px; margin-bottom: 20px;"><canvas id="hourly-chart"></canvas></div>
-                </div>
-                <small>All times are in Australia/Sydney timezone.</small>
+                <div id="analytics-results"></div>
             </div>
         `;
-        
-        if (currentUser.role === 'master-admin') {
-            const tenantAnalyticsFilter = document.getElementById('tenant-analytics-filter');
-            fetch('/api/tenants')
-                .then(res => res.json())
-                .then(tenants => {
-                    tenants.forEach(tenant => {
-                        tenantAnalyticsFilter.innerHTML += `<option value="${tenant.id}">${tenant.displayName}</option>`;
-                    });
-                });
-        }
 
-
-        document.getElementById('export-analytics').addEventListener('click', () => {
-            const chartsContainer = document.getElementById('analytics-charts');
-            html2canvas(chartsContainer).then(canvas => {
-                const link = document.createElement('a');
-                link.download = 'analytics-export.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            });
-        });
-
-        const dateFilter = document.getElementById('date-filter');
+        const tenantFilter = document.getElementById('tenant-filter');
         const campaignFilter = document.getElementById('campaign-filter');
-        const cumulativeCheckbox = document.getElementById('cumulative-checkbox');
-        const refreshButton = document.getElementById('refresh-analytics');
+        const startDateFilter = document.getElementById('start-date-filter');
+        const endDateFilter = document.getElementById('end-date-filter');
+        const analyticsResults = document.getElementById('analytics-results');
 
-        refreshButton.addEventListener('click', () => {
-            fetchAnalyticsData();
-        });
-        
-        const fetchAnalyticsData = () => {
-            let url = '/api/analytics';
-            if (currentUser.role === 'master-admin') {
-                const tenantId = document.getElementById('tenant-analytics-filter').value;
-                url = `/api/admin/analytics?tenantId=${tenantId}`;
-            }
-            
-            fetch(url)
+        // Load tenants for filter
+        fetch('/api/tenants')
+            .then(res => res.json())
+            .then(tenants => {
+                tenants.forEach(tenant => {
+                    const option = document.createElement('option');
+                    option.value = tenant.name;
+                    option.textContent = `${tenant.displayName} (${tenant.name})`;
+                    tenantFilter.appendChild(option);
+                });
+            });
+
+        // Load campaigns for filter
+        fetch('/api/admin/config')
+            .then(res => res.json())
+            .then(config => {
+                config.campaigns.forEach(campaign => {
+                    const option = document.createElement('option');
+                    option.value = campaign.id;
+                    option.textContent = campaign.name;
+                    campaignFilter.appendChild(option);
+                });
+            });
+
+        document.getElementById('apply-filters').addEventListener('click', () => {
+            const tenantId = tenantFilter.value;
+            const campaignId = campaignFilter.value;
+            const startDate = startDateFilter.value;
+            const endDate = endDateFilter.value;
+
+            fetch('/api/analytics')
                 .then(response => response.json())
                 .then(analytics => {
-                    let allConfigs = null;
-                    if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
-                        // Fetch all configs to resolve link names
-                        fetch('/api/admin/all-configs')
-                            .then(res => res.json())
-                            .then(configs => {
-                                allConfigs = configs;
-                                processAnalytics(analytics, allConfigs);
-                            });
-                    } else {
-                        processAnalytics(analytics);
+                    let filteredVisits = analytics.visits;
+                    let filteredClicks = analytics.clicks;
+
+                    // Apply tenant filter
+                    if (tenantId) {
+                        filteredVisits = filteredVisits.filter(visit => visit.tenantId === tenantId);
+                        filteredClicks = filteredClicks.filter(click => click.tenantId === tenantId);
                     }
-                });
-        };
 
-        const processAnalytics = (analytics, allConfigs = null) => {
-            let processedAnalytics = analytics;
-            if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
-                // Aggregate data from all tenants
-                processedAnalytics = Object.values(analytics).reduce((acc, tenantAnalytics) => {
-                    if (tenantAnalytics) {
-                        acc.visits.push(...tenantAnalytics.visits);
-                        acc.clicks.push(...tenantAnalytics.clicks);
+                    // Apply campaign filter
+                    if (campaignId) {
+                        filteredVisits = filteredVisits.filter(visit => visit.campaignId === campaignId);
+                        filteredClicks = filteredClicks.filter(click => click.campaignId === campaignId);
                     }
-                    return acc;
-                }, { visits: [], clicks: [] });
-            }
-            filterAnalyticsData(processedAnalytics, allConfigs);
-        };
 
-        const getSydneyHour = (utcIsoString) => {
-            const date = new Date(utcIsoString);
-            // A reliable way to get the hour in a specific timezone
-            const sydneyTime = new Date(date.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }));
-            return sydneyTime.getHours();
-        };
-
-        const updateAnalyticsCharts = (analyticsData) => {
-            // Clear previous charts
-            const visitsChartCanvas = document.getElementById('visits-chart');
-            const clicksChartCanvas = document.getElementById('clicks-chart');
-            const hourlyChartCanvas = document.getElementById('hourly-chart');
-            if (visitsChartCanvas.chart) visitsChartCanvas.chart.destroy();
-            if (clicksChartCanvas.chart) clicksChartCanvas.chart.destroy();
-            if (hourlyChartCanvas.chart) hourlyChartCanvas.chart.destroy();
-
-            const isCumulative = cumulativeCheckbox.checked;
-
-            if (isCumulative) {
-                const totalVisits = analyticsData.visits.length;
-                const totalClicks = analyticsData.clicks.length;
-                const abandonedVisits = totalVisits - new Set(analyticsData.clicks.map(c => c.ip)).size;
-
-                visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Visitor Engagement'],
-                        datasets: [
-                            {
-                                label: `Followed Link (${totalClicks} - ${totalVisits > 0 ? ((totalClicks / totalVisits) * 100).toFixed(1) : 0}%)`,
-                                data: [totalClicks],
-                                backgroundColor: config.theme.secondaryColor
-                            },
-                            {
-                                label: `Abandoned (${abandonedVisits} - ${totalVisits > 0 ? ((abandonedVisits / totalVisits) * 100).toFixed(1) : 0}%)`,
-                                data: [abandonedVisits],
-                                backgroundColor: config.theme.primaryColor
-                            }
-                        ]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { x: { stacked: true }, y: { stacked: true } }
+                    // Apply date range filter
+                    if (startDate) {
+                        filteredVisits = filteredVisits.filter(visit => new Date(visit.timestamp) >= new Date(startDate));
+                        filteredClicks = filteredClicks.filter(click => new Date(click.timestamp) >= new Date(startDate));
                     }
-                });
-            } else {
-                // Day-by-day breakdown
-                const dataByDay = {};
-                analyticsData.visits.forEach(v => {
-                    const day = new Date(v.timestamp).toLocaleDateString('en-CA'); // YYYY-MM-DD
-                    if (!dataByDay[day]) dataByDay[day] = { visits: 0, clicks: 0 };
-                    dataByDay[day].visits++;
-                });
-                analyticsData.clicks.forEach(c => {
-                    const day = new Date(c.timestamp).toLocaleDateString('en-CA');
-                    if (!dataByDay[day]) dataByDay[day] = { visits: 0, clicks: 0 };
-                    dataByDay[day].clicks++;
-                });
-
-                const sortedDays = Object.keys(dataByDay).sort();
-                const followedData = sortedDays.map(day => dataByDay[day].clicks);
-                const abandonedData = sortedDays.map(day => dataByDay[day].visits - dataByDay[day].clicks);
-
-                visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: sortedDays,
-                        datasets: [
-                            {
-                                label: 'Followed Link',
-                                data: followedData,
-                                backgroundColor: config.theme.secondaryColor
-                            },
-                            {
-                                label: 'Abandoned',
-                                data: abandonedData,
-                                backgroundColor: config.theme.primaryColor
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+                    if (endDate) {
+                        filteredVisits = filteredVisits.filter(visit => new Date(visit.timestamp) <= new Date(endDate));
+                        filteredClicks = filteredClicks.filter(click => new Date(click.timestamp) <= new Date(endDate));
                     }
-                });
-            }
-        
-            const clicksPerLink = {};
-            analyticsData.clicks.forEach(click => {
-                clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
-            });
 
-            const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
-            
-            const getLinkName = (linkId) => {
-                if (linkId.startsWith('social-')) {
-                    const name = linkId.replace('social-', '');
-                    return name.charAt(0).toUpperCase() + name.slice(1);
-                }
-                // In master admin view, we need to check all configs
-                if (currentUser.role === 'master-admin' && allConfigs) {
-                    for (const tenantId in allConfigs) {
-                        const link = allConfigs[tenantId].links.find(l => l.id === linkId);
-                        if (link) return link.text;
-                    }
-                }
-                return config.links.find(l => l.id === linkId)?.text || 'Unknown Link';
-            };
-
-            const linkLabels = sortedLinks.map(([linkId]) => getLinkName(linkId));
-            const clickCounts = sortedLinks.map(([,count]) => count);
-
-            clicksChartCanvas.chart = new Chart(clicksChartCanvas, {
-                type: 'bar',
-                data: {
-                    labels: linkLabels,
-                    datasets: [{
-                        label: 'Clicks per Link',
-                        data: clickCounts,
-                        backgroundColor: config.theme.secondaryColor
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                }
-            });
-
-            // Hourly visits chart
-            const hourlyVisits = Array(24).fill(0);
-            const hourlyClicks = Array(24).fill(0);
-            analyticsData.visits.forEach(visit => {
-                hourlyVisits[getSydneyHour(visit.timestamp)]++;
-            });
-            analyticsData.clicks.forEach(click => {
-                hourlyClicks[getSydneyHour(click.timestamp)]++;
-            });
-
-            hourlyChartCanvas.chart = new Chart(hourlyChartCanvas, {
-                type: 'bar',
-                data: {
-                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                    datasets: [
-                        {
-                            label: 'Followed Links',
-                            data: hourlyClicks,
-                            backgroundColor: config.theme.secondaryColor
-                        },
-                        {
-                            label: 'Abandoned Visits',
-                            data: hourlyVisits.map((v, i) => v - (hourlyClicks[i] || 0)),
-                            backgroundColor: config.theme.primaryColor
+                    // Group by date
+                    const visitsByDate = {};
+                    const clicksByDate = {};
+                    filteredVisits.forEach(visit => {
+                        const date = new Date(visit.timestamp).toISOString().split('T')[0];
+                        if (!visitsByDate[date]) {
+                            visitsByDate[date] = 0;
                         }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { 
-                        x: { stacked: true },
-                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
-                    }
-                }
-            });
-        };
+                        visitsByDate[date]++;
+                    });
+                    filteredClicks.forEach(click => {
+                        const date = new Date(click.timestamp).toISOString().split('T')[0];
+                        if (!clicksByDate[date]) {
+                            clicksByDate[date] = 0;
+                        }
+                        clicksByDate[date]++;
+                    });
 
-        const filterAnalyticsData = (analytics) => {
-            const selectedDateFilter = dateFilter.value;
-            const selectedCampaignFilter = campaignFilter.value;
-
-            let filteredAnalytics = { visits: [...analytics.visits], clicks: [...analytics.clicks] };
-
-            // Filter by date
-            const now = new Date();
-            let startDate = new Date();
-            let endDate = new Date(); // Use a separate end date
-
-            if (selectedDateFilter === 'all') {
-                startDate = new Date(0);
-            } else if (selectedDateFilter === 'yesterday') {
-                startDate.setDate(now.getDate() - 1);
-                startDate.setHours(0, 0, 0, 0);
-                endDate.setDate(now.getDate() - 1);
-                endDate.setHours(23, 59, 59, 999);
-            } else if (selectedDateFilter === '1') { // Today
-                startDate.setHours(0, 0, 0, 0);
-            } else {
-                startDate.setDate(now.getDate() - parseInt(selectedDateFilter));
-            }
-            
-            filteredAnalytics.visits = filteredAnalytics.visits.filter(v => {
-                const visitDate = new Date(v.timestamp);
-                return visitDate >= startDate && visitDate <= endDate;
-            });
-            filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => {
-                const clickDate = new Date(c.timestamp);
-                return clickDate >= startDate && clickDate <= endDate;
-            });
-
-            // Populate campaign filter based on date filter
-            const currentCampaignSelection = campaignFilter.value;
-            campaignFilter.innerHTML = '<option value="all">All Campaigns</option>';
-            config.campaigns.forEach(c => {
-                if (new Date(c.endDate) >= startDate) {
-                    campaignFilter.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-                }
-            });
-            campaignFilter.value = currentCampaignSelection;
-
-            // Filter by campaign
-            if (campaignFilter.value !== 'all') {
-                const campaign = config.campaigns.find(c => c.id === campaignFilter.value);
-                if (campaign) {
-                    const campaignStart = new Date(campaign.startDate);
-                    const campaignEnd = new Date(campaign.endDate);
-                    filteredAnalytics.visits = filteredAnalytics.visits.filter(v => new Date(v.timestamp) >= campaignStart && new Date(v.timestamp) <= campaignEnd);
-                    filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => new Date(c.timestamp) >= campaignStart && new Date(c.timestamp) <= campaignEnd);
-                }
-            }
-
-            updateAnalyticsCharts(filteredAnalytics);
-        };
-
-        const filterAndRender = () => fetchAnalyticsData();
-        dateFilter.addEventListener('change', filterAndRender);
-        campaignFilter.addEventListener('change', filterAndRender);
-        cumulativeCheckbox.addEventListener('change', filterAndRender);
-        if (currentUser.role === 'master-admin') {
-            document.getElementById('tenant-analytics-filter').addEventListener('change', filterAndRender);
-        }
-        filterAndRender(); // Initial load
-    }
-
-    function showSaveConfirmation(button) {
-        const originalText = button.textContent;
-        button.textContent = 'Saved!';
-        button.style.backgroundColor = '#28a745';
-        setTimeout(() => {
-            button.textContent = originalText;
-            button.style.backgroundColor = '#007bff';
-        }, 2000);
-    }
-
-    function saveConfig(config, button) {
-        return fetch('/api/config', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        }).then(res => {
-            if (res.ok && button) {
-                showSaveConfirmation(button);
-            }
-            return res;
-        });
-    }
-});
+                    // Prepare data for chart
+                    const chartData = {
+                        labels: Object.keys(visitsByDate),
+                        datasets: [
+                            {
+                                label: 'Visits',
+                                data: Object.values(visitsByDate),
+                                backgroundColor: config.theme.primaryColor
+                           
