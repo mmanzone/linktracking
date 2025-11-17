@@ -117,14 +117,7 @@ button.success, .button.success {
     color: #999 !important;
 }
 
-.admin-container {
-    width: 90%;
-    max-width: 1400px;
-    margin: 20px auto;
-    padding: 20px;
-    box-shadow: 0 4px 20px var(--shadow-color);
-    border: 1px solid var(--light-grey);
-}
+
 
 
 /* III. Admin Interface (Wide-Screen Specific) */
