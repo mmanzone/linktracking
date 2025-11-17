@@ -862,7 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>Campaigns Management</h2>
                 <p style="font-size: 0.9rem; color: #606770;">
                     Campaigns allow you to specify a specific event that you want to track separately, e.g. an event, exhibition or specific outreach. 
-                    For each campaign, set the start and end dates, the name of the campaign/event, a description for you to remember, and a banner message that will be displayed on the landing page during the campaign.<br>
+
                     You can then choose which links from the library you want to display and in which order. The selected links and order will only apply during the campaign dates. If you need to add a link for that campaign, you need to create it in the Links admin menu first.
                     You can see the results of the campaign in this menu, or in the Analytics page, using the Campaign filter.
                 </p>
@@ -1043,7 +1043,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
                                 <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
                             </div>
-                            <h4>Links</h4>
+                            <h4>Manage links for this campaign</h4>
+                            <p style="font-size: 0.9rem; color: #606770;">You can then choose which links from the library you want to display and in which order. The selected links and order will only apply during the campaign dates. If you need to add a link for that campaign, you need to create it in the Links admin menu first.</p>
                             <div class="campaign-links-header">
                                 <div class="link-order-header">Move</div>
                                 <div class="link-display-header">Display/Hide</div>
