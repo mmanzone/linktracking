@@ -339,7 +339,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Tenant Name (for URL, e.g., 'my-company'): <input type="text" id="tenant-name-input" required></label>
                     <label>Display Name: <input type="text" id="tenant-display-name-input" required></label>
                     <label>Admin Email: <input type="email" id="tenant-email-input" required></label>
-                    <label><input type="checkbox" id="send-welcome-email-checkbox" checked> Send welcome email</label>
+                    <div style="display: flex; align-items: center; gap: 1em; margin-bottom: 1em;">
+                        <label class="switch">
+                            <input type="checkbox" id="send-welcome-email-checkbox" checked>
+                            <span class="slider round"></span>
+                        </label>
+                        <span>Send welcome email</span>
+                    </div>
                     <button type="submit">Create Tenant</button>
                 </form>
             </div>
@@ -691,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         config.links.forEach((link, index) => {
             const linkElement = document.createElement('div');
             linkElement.classList.add('link-admin');
+            linkElement.style.alignItems = 'center';
             if (!link.visible) {
                 linkElement.classList.add('inactive');
             }
@@ -701,19 +708,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="move-down" ${index === config.links.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
                 <div style="text-align: center;">
-                    <img src="${link.icon}" style="width: 64px; height: 64px; vertical-align: middle;">
+                    <img src="${link.icon}" style="width: 64px; height: 64px;">
                     <input type="file" class="link-icon-upload" style="display: none;">
                     <button class="change-icon" title="Change Icon" style="padding: 5px; display: block; margin: 5px auto 0;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     </button>
                 </div>
-                <input type="text" class="link-text-edit" value="${link.text}" placeholder="Link Name">
+                <input type="text" class="link-text-edit" value="${link.text}" placeholder="Link Name" style="font-weight: bold;">
                 <input type="text" class="link-url-edit" value="${link.url}" placeholder="https://...">
-                <label class="switch">
-                    <input type="checkbox" class="hide-link-toggle" ${link.visible ? 'checked' : ''}>
-                    <span class="slider round"></span>
-                </label>
-                <button class="delete-link">Delete</button>
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                    <label class="switch">
+                        <input type="checkbox" class="hide-link-toggle" ${link.visible ? 'checked' : ''}>
+                        <span class="slider round"></span>
+                    </label>
+                    <button class="delete-link">Delete</button>
+                </div>
             `;
             linksList.appendChild(linkElement);
         });
@@ -1084,7 +1093,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <option value="all">All time</option>
                     </select>
                     <select id="campaign-filter"></select>
-                    <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
+                    <div style="display: flex; align-items: center; gap: 0.5em;">
+                        <label class="switch">
+                            <input type="checkbox" id="cumulative-checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                        <span>Cumulative</span>
+                    </div>
                     <button id="export-analytics">Export Graphs</button>
                     <button id="refresh-analytics" title="Refresh Data">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
