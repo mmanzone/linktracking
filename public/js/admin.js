@@ -685,7 +685,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div>Logo</div>
                     <div>Link Name</div>
                     <div>Link Address</div>
-                    <div style="text-align: right;">Actions</div>
+                    <div>Show</div>
+                    <div>Actions</div>
                 </div>
                 <div id="links-list"></div>
                 <button id="add-link">Add New Link</button>
@@ -858,10 +859,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
-                <h2>Campaign Management</h2>
+                <h2>Campaigns Management</h2>
                 <p style="font-size: 0.9rem; color: #606770;">
                     Campaigns allow you to specify a specific event that you want to track separately, e.g. an event, exhibition or specific outreach. 
-                    For each campaign, set the start and end dates, the name of the campaign/event, a description for you to remember, and a banner message that will be displayed on the landing page during the campaign.
+                    For each campaign, set the start and end dates, the name of the campaign/event, a description for you to remember, and a banner message that will be displayed on the landing page during the campaign.<br>
                     You can then choose which links from the library you want to display and in which order. The selected links and order will only apply during the campaign dates. If you need to add a link for that campaign, you need to create it in the Links admin menu first.
                     You can see the results of the campaign in this menu, or in the Analytics page, using the Campaign filter.
                 </p>
@@ -1028,8 +1029,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     campaignAdmin.innerHTML = `
                         <div style="width: 100%;">
                             <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
-                            <label>Admin Description: <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
-                            <label>Banner Message: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40" style="width: 100%;"></label>
+                            <label>Internal Description (not visible to visitors): <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
+                            <label>Banner Message for visitors: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40" style="width: 100%;"></label>
                             <div style="display: flex; gap: 10px;">
                                 <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
                                 <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
