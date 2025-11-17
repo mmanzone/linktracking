@@ -138,10 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>User Management</h2>
                 <div id="users-list-container">
                     <div class="user-admin-header">
-                        <div class="user-col-email sortable" data-sort="email">email</div>
-                        <div class="user-col-name sortable" data-sort="firstName">First and last name</div>
-                        <div class="user-col-login sortable" data-sort="lastLogin">Last connetion</div>
-                        <div class="user-col-status">Status</div>
+                        <div class="user-col-email sortable" data-sort="email">Email</div>
+                        <div class="user-col-name sortable" data-sort="firstName">Full Name</div>
+                        <div class="user-col-login sortable" data-sort="lastLogin">Last Connection</div>
                         <div class="user-col-actions">Actions</div>
                     </div>
                     <div id="users-list"></div>
@@ -196,13 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="user-col-email">${user.email}</div>
                             <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
                             <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
-                            <div class="user-col-status">
+                            <div class="user-col-actions">
                                 <label class="switch">
                                     <input type="checkbox" class="disable-user-toggle" ${!user.disabled ? 'checked' : ''} ${isCurrentUser ? 'disabled' : ''}>
                                     <span class="slider round"></span>
                                 </label>
-                            </div>
-                            <div class="user-col-actions">
                                 <button class="edit-user">Edit</button>
                                 ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                             </div>
@@ -247,7 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
                         </div>
                         <div class="user-col-login"></div>
-                        <div class="user-col-status"></div>
                         <div class="user-col-actions">
                             <button class="save-user" data-id="${user.id}">Save</button>
                             <button class="cancel-edit">Cancel</button>
@@ -1045,10 +1041,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <h4>Manage links for this campaign</h4>
                             <p style="font-size: 0.9rem; color: #606770;">You can choose which links from the library you want to display and in which order. If you need to add a link for that campaign, you need to create it in the Links admin menu first. </p>
-                            <div class="campaign-links-header">
-                                <div class="link-order-header">Move</div>
-                                <div class="link-display-header">Display/Hide</div>
-                                <div class="link-name-header">Link</div>
+                            <div class="campaign-links-header" style="align-items: center;">
+                                <div>Move</div>
+                                <div>Show</div>
+                                <div>Link</div>
                             </div>
                             <div class="campaign-links-edit">${campaignLinksHtml}</div>
                             <div class="button-container">
