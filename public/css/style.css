@@ -233,6 +233,16 @@ input, textarea {
     flex-shrink: 0;
 }
 
+.admin-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-logo {
+    height: 50px;
+}
+
 /* Homepage Styles */
 .homepage-container {
     text-align: center;
