@@ -465,8 +465,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <h2>Social Links</h2>
                 <div id="social-links-admin"></div>
+                <div class="button-container"><button id="save-social-links">Save changes</button></div>
                 <button id="add-social-link">Add Social Link</button>
-                <div class="button-container"><button id="save-social-links">Save Social Links</button></div>
 
                 <h2>QR Codes</h2>
                 <div style="display: flex; gap: 20px;">
@@ -572,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const socialLinksAdmin = document.getElementById('social-links-admin');
         config.socialLinks.forEach((link, index) => {
             const linkEl = document.createElement('div');
+            linkEl.classList.add('social-link-row');
             linkEl.innerHTML = `
                 <select data-index="${index}">
                     <option value="facebook" ${link.name === 'facebook' ? 'selected' : ''}>Facebook</option>

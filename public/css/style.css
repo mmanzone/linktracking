@@ -216,6 +216,23 @@ input, textarea {
     justify-content: flex-start;
 }
 
+.social-link-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.social-link-row select {
+    width: 150px;
+    flex-shrink: 0;
+}
+.social-link-row input {
+    flex-grow: 1;
+}
+.social-link-row button {
+    flex-shrink: 0;
+}
+
 /* Homepage Styles */
 .homepage-container {
     text-align: center;
