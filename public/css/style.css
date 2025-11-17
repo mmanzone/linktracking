@@ -230,6 +230,7 @@ input, textarea {
 
 .admin-header {
     display: flex;
+<<<<<<< HEAD
     justify-content: space-between;
     align-items: center;
     padding: 10px 20px;
@@ -239,6 +240,12 @@ input, textarea {
     display: flex;
     align-items: center;
     gap: 15px;
+=======
+    align-items: center;
+    gap: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+>>>>>>> 63bc3ec (I have now added the logo to the left of the title in the admin header and set its heigh)
 }
 .header-logo {
     height: 128px;
@@ -247,10 +254,13 @@ input, textarea {
     margin: 0;
     font-size: 1.5rem;
 }
+<<<<<<< HEAD
 #preview-link svg {
     vertical-align: middle;
     color: var(--cool-blue);
 }
+=======
+>>>>>>> 63bc3ec (I have now added the logo to the left of the title in the admin header and set its heigh)
 
 /* Homepage Styles */
 .homepage-container {
