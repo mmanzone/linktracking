@@ -7,31 +7,36 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div class="main-container">
-        <div class="admin-container">
-            <header class="admin-header">
+    <div class="main-container admin-container">
+        <header class="admin-header">
+            <div class="header-left">
+                <img src="/images/logo.svg" alt="Rinkleach Logo" class="header-logo">
                 <h1 id="admin-title">Administration</h1>
-            </header>
-            <div id="admin-panel">
-                <div class="tabs">
-                    <button class="tab-link active" data-tab="general">General</button>
-                    <button class="tab-link" data-tab="links">Links</button>
-                    <button class="tab-link" data-tab="campaigns">Campaigns</button>
-                    <button class="tab-link" data-tab="analytics">Analytics</button>
-                    <!-- Master admin tabs will be injected here -->
-                </div>
-                <div id="admin-content">
-                    <!-- Admin content will be dynamically loaded here -->
-                </div>
+                <a href="#" id="preview-link" target="_blank" title="Preview Landing Page">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </a>
+            </div>
+            <button id="logout-btn">Logout</button>
+        </header>
+        <div id="admin-panel" style="display: none;">
+            <div class="tabs">
+                <button class="tab-link active" data-tab="general">General</button>
+                <button class="tab-link" data-tab="links">Links</button>
+                <button class="tab-link" data-tab="campaigns">Campaigns</button>
+                <button class="tab-link" data-tab="analytics">Analytics</button>
+                <!-- Master admin tabs will be injected here -->
+            </div>
+            <div id="admin-content">
+                <!-- Admin content will be dynamically loaded here -->
             </div>
         </div>
-        <footer>
-            <a href="/index.html">Home Page</a>
-            <a href="/login">Get Started</a>
-            <a href="#">About Us</a>
-            <button id="logout-btn">Logout</button>
-        </footer>
     </div>
+    <footer>
+        <a href="/index.html">Home Page</a>
+        <a href="/login">Get Started</a>
+        <a href="#">About Us</a>
+        <button id="logout-btn">Logout</button>
+    </footer>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.4.13/dist/easy.qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
