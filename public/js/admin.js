@@ -989,9 +989,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     campaign.endDate = newEndDate.toISOString();
                     
                     const linkRows = campaignAdmin.querySelectorAll('.campaign-link-row');
+                    const newLinkOrder = Array.from(linkRows).map(row => row.dataset.id);
+
                     campaign.links = Array.from(linkRows)
                         .filter(row => row.querySelector('input[type="checkbox"]').checked)
                         .map(row => row.dataset.id);
+                    
+                    const allLinksFromConfig = new Set(config.links.map(l => l.id));
+                    const campaignLinks = new Set(campaign.links);
+                    const remainingLinks = config.links.filter(l => !campaignLinks.has(l.id)).map(l => l.id);
+                    
+                    campaign.links.sort((a, b) => newLinkOrder.indexOf(a) - newLinkOrder.indexOf(b));
 
                     saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
                 }
@@ -1019,9 +1027,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
                                 <span class="slider round"></span>
                             </label>
-                            <div class="link">
-                                <img src="${link.icon}" alt="${link.text}" style="height: 64px;">
-                                <span>${link.text}</span>
+                            <div class="link" style="display: flex; align-items: center; gap: 10px;">
+                                <img src="${link.icon}" alt="${link.text}" style="height: 48px; width: 48px;">
+                                <span style="font-weight: bold;">${link.text}</span>
                             </div>
                         </div>
                     `).join('');
@@ -1048,6 +1056,25 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                     `;
+
+                    const linksEditContainer = campaignAdmin.querySelector('.campaign-links-edit');
+                    linksEditContainer.addEventListener('click', e => {
+                        const row = e.target.closest('.campaign-link-row');
+                        if (!row) return;
+
+                        if (e.target.matches('.move-link-up')) {
+                            const prev = row.previousElementSibling;
+                            if (prev) {
+                                linksEditContainer.insertBefore(row, prev);
+                            }
+                        }
+                        if (e.target.matches('.move-link-down')) {
+                            const next = row.nextElementSibling;
+                            if (next) {
+                                linksEditContainer.insertBefore(next, row);
+                            }
+                        }
+                    });
                 }
 
                 if (event.target.classList.contains('delete-campaign')) {
