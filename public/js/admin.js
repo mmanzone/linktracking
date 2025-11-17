@@ -685,7 +685,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div>Logo</div>
                     <div>Link Name</div>
                     <div>Link Address</div>
-                    <div>Show</div>
                     <div>Actions</div>
                 </div>
                 <div id="links-list"></div>
@@ -1022,10 +1021,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="move-link-up">▲</button>
                                 <button class="move-link-down">▼</button>
                             </div>
-                            <label class="switch" style="width: auto;">
-                                <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
-                                <span class="slider round"></span>
-                            </label>
+                            <div>
+                                <label class="switch">
+                                    <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
                             <div class="link" style="display: flex; align-items: center; gap: 10px;">
                                 <img src="${link.icon}" alt="${link.text}" style="height: 48px; width: 48px;">
                                 <span style="font-weight: bold;">${link.text}</span>
