@@ -1041,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <h4>Manage links for this campaign</h4>
                             <p style="font-size: 0.9rem; color: #606770;">You can choose which links from the library you want to display and in which order. If you need to add a link for that campaign, you need to create it in the Links admin menu first. </p>
-                            <div class="campaign-links-header" style="align-items: center;">
+                            <div class="campaign-links-header">
                                 <div>Move</div>
                                 <div>Show</div>
                                 <div>Link</div>

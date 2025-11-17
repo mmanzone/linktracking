@@ -344,6 +344,11 @@ input, textarea {
     padding: 10px;
     font-weight: bold;
     border-bottom: 1px solid var(--border-color);
+    align-items: center;
+}
+
+.campaign-link-header div:nth-child(3) {
+    text-align: left;
 }
 
 .campaign-link-row {
