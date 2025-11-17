@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         adminContentDiv.innerHTML = `
             <div id="users-tab" class="tab-content active">
-                <h2>Users Management</h2>
+                <h2>User Management</h2>
                 <div id="users-list-container">
                     <div class="user-admin-header">
                         <div class="user-col-email sortable" data-sort="email">email</div>
@@ -325,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     messageEl.textContent = 'Invite sent successfully!';
                     loadAdminContent('users');
                 });
+            });
         }
     }
     
@@ -333,10 +334,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="tenants-tab" class="tab-content active">
                 <h2>Tenant Management</h2>
                 <div id="tenants-list"></div>
-                <h3>Create a New Organisation/Tenant</h3>
+                <h3>Create New Tenant</h3>
                 <form id="create-tenant-form">
-                    <label>Organisation Full Name: <input type="text" id="tenant-display-name-input" required></label>
                     <label>Tenant Name (for URL, e.g., 'my-company'): <input type="text" id="tenant-name-input" required></label>
+                    <label>Display Name: <input type="text" id="tenant-display-name-input" required></label>
                     <label>Admin Email: <input type="email" id="tenant-email-input" required></label>
                     <label><input type="checkbox" id="send-welcome-email-checkbox" checked> Send welcome email</label>
                     <button type="submit">Create Tenant</button>
@@ -470,12 +471,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div>
                         <p>Standard</p>
                         <div id="qrcode-standard"></div>
-                        <button id="download-standard">Download Standard</button>
+                        <button id="download-standard">Download</button>
                     </div>
                     <div>
                         <p>With Logo</p>
                         <div id="qrcode-logo"></div>
-                        <button id="download-logo">Download with Logo</button>
+                        <button id="download-logo">Download</button>
                     </div>
                 </div>
             </div>
@@ -678,8 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div>Logo</div>
                     <div>Link Name</div>
                     <div>Link Address</div>
-                    <div>Show</div>
-                    <div>Actions</div>
+                    <div style="text-align: right;">Actions</div>
                 </div>
                 <div id="links-list"></div>
                 <button id="add-link">Add New Link</button>
@@ -839,285 +839,589 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCampaignsTab(config) {
+        let tenantFilter = '';
+        if (currentUser.role === 'master-admin') {
+            tenantFilter = `
+                <select id="tenant-campaign-filter">
+                    <option value="">All Tenants</option>
+                </select>
+            `;
+        }
         adminContentDiv.innerHTML = `
             <div id="campaigns-tab" class="tab-content active">
-                <h2>Campaigns Management</h2>
-                <div class="actions">
-                    <button id="add-campaign-btn" class="button">Add New Campaign</button>
+                <h2>Campaign Management</h2>
+                <p style="font-size: 0.9rem; color: #606770;">
+                    Campaigns allow you to specify a specific event that you want to track separately, e.g. an event, exhibition or specific outreach. 
+                    For each campaign, set the start and end dates, the name of the campaign/event, a description for you to remember, and a banner message that will be displayed on the landing page during the campaign.
+                    You can then choose which links from the library you want to display and in which order. The selected links and order will only apply during the campaign dates. If you need to add a link for that campaign, you need to create it in the Links admin menu first.
+                    You can see the results of the campaign in this menu, or in the Analytics page, using the Campaign filter.
+                </p>
+                <div id="campaign-filters">
+                    ${tenantFilter}
+                    <label>Show campaigns started in the last: 
+                        <select id="campaign-date-filter">
+                            <option value="180">6 months</option>
+                            <option value="30">1 month</option>
+                            <option value="90">3 months</option>
+                            <option value="365">12 months</option>
+                            <option value="all">All time</option>
+                        </select>
+                    </label>
                 </div>
                 <div id="campaigns-list"></div>
+                <button id="add-campaign">Add New Campaign</button>
             </div>
         `;
 
         const campaignsList = document.getElementById('campaigns-list');
-        const addCampaignBtn = document.getElementById('add-campaign-btn');
+        const campaignDateFilter = document.getElementById('campaign-date-filter');
 
-        // Fetch campaigns and links in parallel
-        Promise.all([
-            fetch('/api/campaigns').then(res => res.json()),
-            fetch('/api/admin/config').then(res => res.json()).then(c => c.links)
-        ]).then(([campaigns, links]) => {
-            const renderCampaigns = () => {
-                campaignsList.innerHTML = campaigns.map(campaign => `
-                    <div class="campaign-admin" data-id="${campaign.id}">
-                        <div class="campaign-header">
-                            <h3>${campaign.name}</h3>
-                            <div class="campaign-actions">
-                                <button class="edit-campaign-btn">Edit</button>
-                                <button class="delete-campaign-btn">Delete</button>
-                            </div>
+        const displayCampaigns = (campaigns, config) => {
+            campaignsList.innerHTML = '';
+            const filterValue = campaignDateFilter.value;
+            const now = new Date();
+            let startDate = new Date();
+            if (filterValue !== 'all') {
+                startDate.setDate(now.getDate() - parseInt(filterValue));
+            } else {
+                startDate = new Date(0);
+            }
+
+            campaigns
+                .filter(c => {
+                    const campaignStartDate = new Date(c.startDate);
+                    return campaignStartDate >= startDate || campaignStartDate > now;
+                })
+                .forEach(campaign => {
+                    const campaignElement = document.createElement('div');
+                    campaignElement.classList.add('campaign-admin');
+                    campaignElement.dataset.id = campaign.id;
+                    campaignElement.innerHTML = `
+                        <div>
+                            <strong>${campaign.name}</strong><br>
+                            <small>${new Date(campaign.startDate).toLocaleDateString()} - ${new Date(campaign.endDate).toLocaleDateString()}</small>
                         </div>
-                    </div>
-                `).join('');
-            };
-
-            const openEditCampaignModal = (campaign) => {
-                const modal = document.createElement('div');
-                modal.className = 'modal';
-                modal.innerHTML = `
-                <div class="modal-content">
-                    <span class="close-button">&times;</span>
-                    <h3>Edit Campaign: ${campaign.name}</h3>
-                    <form id="edit-campaign-form">
-                        <label for="campaign-name">Name:</label>
-                        <input type="text" id="campaign-name" value="${campaign.name}" required>
-                        
-                        <label for="campaign-start">Start Date:</label>
-                        <input type="datetime-local" id="campaign-start" value="${campaign.start_date ? new Date(new Date(campaign.start_date).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}">
-                        
-                        <label for="campaign-end">End Date:</label>
-                        <input type="datetime-local" id="campaign-end" value="${campaign.end_date ? new Date(new Date(campaign.end_date).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}">
-                        
-                        <div class="links-edit-container">
-                            <h4>Choose the links to display during this campaign</h4>
-                            <div class="link-admin-header" style="grid-template-columns: 40px 100px 1fr;">
-                                <div>Move</div>
-                                <div>Show</div>
-                                <div>Link Name</div>
-                            </div>
-                            <!-- Links will be populated here -->
-                        </div>
-                        <button type="submit" class="button">Save Changes</button>
-                    </form>
-                </div>
-                `;
-                document.body.appendChild(modal);
-
-                const linksEditContainer = modal.querySelector('.links-edit-container');
-                
-                // Use the fetched links data
-                const sortedLinksForCampaign = [...links].sort((a, b) => {
-                    const aPos = campaign.link_order ? campaign.link_order.indexOf(a.id) : -1;
-                    const bPos = campaign.link_order ? campaign.link_order.indexOf(b.id) : -1;
-                    if (aPos === -1 && bPos === -1) return 0;
-                    if (aPos === -1) return 1;
-                    if (bPos === -1) return -1;
-                    return aPos - bPos;
-                });
-
-                sortedLinksForCampaign.forEach((link, index) => {
-                    const isIncluded = campaign.links.includes(link.id);
-                    const linkElement = document.createElement('div');
-                    linkElement.className = `link-admin campaign-link-row ${!isIncluded ? 'inactive' : ''}`;
-                    linkElement.dataset.id = link.id;
-                    linkElement.style.alignItems = 'center';
-                    linkElement.innerHTML = `
-                        <div class="link-order">
-                            <button class="move-link-up" ${index === 0 ? 'disabled' : ''}>▲</button>
-                            <button class="move-link-down" ${index === sortedLinksForCampaign.length - 1 ? 'disabled' : ''}>▼</button>
-                        </div>
-                        <label class="switch" style="width: auto; justify-self: center;">
-                            <input type="checkbox" class="include-link-toggle" value="${link.id}" ${isIncluded ? 'checked' : ''}>
-                            <span class="slider round"></span>
-                        </label>
-                        <div class="link-info" style="display: flex; align-items: center; background: none; box-shadow: none; padding: 0;">
-                            <img src="${link.icon}" alt="${link.text}" style="height: 64px;">
-                            <span style="font-weight: bold; margin-left: 10px;">${link.text}</span>
+                        <div>
+                            <button class="edit-campaign">Edit</button>
+                            <button class="view-campaign-stats">View Stats</button>
+                            <button class="delete-campaign">Delete</button>
                         </div>
                     `;
-                    linksEditContainer.appendChild(linkElement);
+                    campaignsList.appendChild(campaignElement);
                 });
+        };
 
-                modal.querySelector('.close-button').onclick = () => document.body.removeChild(modal);
-                window.onclick = (event) => {
-                    if (event.target == modal) {
-                        document.body.removeChild(modal);
-                    }
-                };
+        const fetchAndDisplayCampaigns = () => {
+            fetch('/api/admin/config').then(res => res.json()).then(config => {
+                displayCampaigns(config.campaigns, config);
+            });
+        };
+        
+        document.getElementById('add-campaign').addEventListener('click', (e) => {
+            fetch('/api/admin/config').then(res => res.json()).then(config => {
+                const newConfig = { ...config };
+                const startDate = new Date();
+                startDate.setHours(0, 0, 0, 0);
+                const endDate = new Date();
+                endDate.setHours(23, 59, 59, 999);
 
-                linksEditContainer.addEventListener('click', e => {
-                    const button = e.target.closest('button');
-                    if (!button) return;
-
-                    const currentRow = e.target.closest('.campaign-link-row');
-                    const currentId = currentRow.dataset.id;
-                    let rows = Array.from(linksEditContainer.querySelectorAll('.campaign-link-row'));
-                    let currentIndex = rows.findIndex(row => row.dataset.id === currentId);
-
-                    if (button.classList.contains('move-link-up') && currentIndex > 0) {
-                        const previousRow = rows[currentIndex - 1];
-                        linksEditContainer.insertBefore(currentRow, previousRow);
-                    } else if (button.classList.contains('move-link-down') && currentIndex < rows.length - 1) {
-                        const nextRow = rows[currentIndex + 1];
-                        linksEditContainer.insertBefore(nextRow, currentRow);
-                    }
-                    
-                    // After move, re-evaluate button states for all rows
-                    rows = Array.from(linksEditContainer.querySelectorAll('.campaign-link-row'));
-                    rows.forEach((row, index) => {
-                        row.querySelector('.move-link-up').disabled = index === 0;
-                        row.querySelector('.move-link-down').disabled = index === rows.length - 1;
-                    });
-                });
-
-                linksEditContainer.addEventListener('change', e => {
-                    if (e.target.classList.contains('include-link-toggle')) {
-                        const row = e.target.closest('.campaign-link-row');
-                        if (e.target.checked) {
-                            row.classList.remove('inactive');
-                        } else {
-                            row.classList.add('inactive');
-                        }
-                    }
-                });
-
-                document.getElementById('edit-campaign-form').onsubmit = async (e) => {
-                    e.preventDefault();
-                    const name = document.getElementById('campaign-name').value;
-                    const startDateValue = document.getElementById('campaign-start').value;
-                    const endDateValue = document.getElementById('campaign-end').value;
-
-                    // Convert local datetime-local string to UTC ISO string
-                    const startDate = startDateValue ? new Date(startDateValue).toISOString() : null;
-                    const endDate = endDateValue ? new Date(endDateValue).toISOString() : null;
-
-
-                    if (endDate && startDate && new Date(endDate) < new Date(startDate)) {
-                        return alert('End date cannot be before start date.');
-                    }
-                    
-                    const includedLinks = Array.from(linksEditContainer.querySelectorAll('.include-link-toggle:checked')).map(input => input.value);
-                    const linkOrder = Array.from(linksEditContainer.querySelectorAll('.campaign-link-row')).map(row => row.dataset.id);
-
-
-                    const updatedCampaign = {
-                        ...campaign,
-                        name,
-                        start_date: startDate,
-                        end_date: endDate,
-                        links: includedLinks,
-                        link_order: linkOrder
-                    };
-
-                    fetch(`/api/campaigns/${campaign.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(updatedCampaign)
-                    }).then(() => {
-                        document.body.removeChild(modal);
-                        // This is a bit of a hack to refresh the content
-                        loadAdminContent('general');
-                        setTimeout(() => loadAdminContent('campaigns'), 100);
-                    });
-                };
-            };
-            renderCampaigns();
-
-            addCampaignBtn.addEventListener('click', () => {
-                const newCampaign = {
+                newConfig.campaigns.push({
+                    id: Date.now().toString(),
                     name: 'New Campaign',
-                    start_date: new Date().toISOString(),
-                    end_date: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
-                    links: [],
-                    link_order: []
-                };
-
-                fetch('/api/campaigns', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newCampaign)
-                }).then(res => res.json())
-                .then(newlyCreatedCampaign => {
-                    campaigns.push(newlyCreatedCampaign); // Add to local array
-                    renderCampaigns(); // Re-render the list
-                    openEditCampaignModal(newlyCreatedCampaign); // Open modal for the new campaign
+                    description: '',
+                    message: '',
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    links: config.links.map(l => l.id) 
                 });
+                saveConfig(newConfig, e.target).then(() => loadAdminContent('campaigns'));
             });
+        });
+        
+        fetchAndDisplayCampaigns();
+        campaignDateFilter.addEventListener('change', fetchAndDisplayCampaigns);
 
-            campaignsList.addEventListener('click', (e) => {
-                const campaignAdmin = e.target.closest('.campaign-admin');
-                if (!campaignAdmin) return;
-                const campaignId = campaignAdmin.dataset.id;
-                
-                const targetButton = e.target.closest('button');
-                
-                if(targetButton && targetButton.classList.contains('delete-campaign-btn')) {
+        campaignsList.addEventListener('click', (event) => {
+            const campaignId = event.target.closest('.campaign-admin')?.dataset.id;
+            if (!campaignId) return;
+
+            fetch('/api/admin/config').then(res => res.json()).then(config => {
+                let newConfig = { ...config };
+                const campaign = newConfig.campaigns.find(c => c.id === campaignId);
+
+                if (event.target.classList.contains('save-edit-campaign')) {
+                    const campaignAdmin = event.target.closest('.campaign-admin');
+                    const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
+                    const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
+                    
+                    if (newEndDate < newStartDate) {
+                        alert('Error: End date cannot be before the start date.');
+                        return;
+                    }
+                    newEndDate.setHours(23, 59, 59, 999); 
+
+                    const overlaps = newConfig.campaigns.some(c => {
+                        if (c.id === campaignId) return false;
+                        const existingStart = new Date(c.startDate);
+                        const existingEnd = new Date(c.endDate);
+                        return (newStartDate < existingEnd && newEndDate > existingStart);
+                    });
+
+                    if (overlaps) {
+                        alert('Error: Campaign dates overlap with an existing campaign.');
+                        return;
+                    }
+
+                    campaign.name = campaignAdmin.querySelector('.campaign-name-edit').value;
+                    campaign.description = campaignAdmin.querySelector('.campaign-description-edit').value;
+                    campaign.message = campaignAdmin.querySelector('.campaign-message-edit').value;
+                    campaign.startDate = newStartDate.toISOString();
+                    campaign.endDate = newEndDate.toISOString();
+                    
+                    const linkRows = campaignAdmin.querySelectorAll('.campaign-link-row');
+                    campaign.links = Array.from(linkRows)
+                        .filter(row => row.querySelector('input[type="checkbox"]').checked)
+                        .map(row => row.dataset.id);
+
+                    saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
+                }
+
+                if (event.target.classList.contains('cancel-edit-campaign')) {
+                    loadAdminContent('campaigns');
+                }
+
+                if (event.target.classList.contains('edit-campaign')) {
+                    const campaignAdmin = event.target.closest('.campaign-admin');
+                    
+                    const campaignLinkIds = new Set(campaign.links);
+                    const sortedLinksForCampaign = [
+                        ...campaign.links.map(id => config.links.find(l => l.id === id)).filter(Boolean),
+                        ...config.links.filter(l => !campaignLinkIds.has(l.id))
+                    ];
+
+                    const campaignLinksHtml = sortedLinksForCampaign.map(link => `
+                        <div class="campaign-link-row ${!campaign.links.includes(link.id) ? 'inactive' : ''}" data-id="${link.id}">
+                            <div class="link-order">
+                                <button class="move-link-up">▲</button>
+                                <button class="move-link-down">▼</button>
+                            </div>
+                            <label class="switch" style="width: auto;">
+                                <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                                <span class="slider round"></span>
+                            </label>
+                            <div class="link">
+                                <img src="${link.icon}" alt="${link.text}" style="height: 64px;">
+                                <span>${link.text}</span>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    campaignAdmin.innerHTML = `
+                        <div style="width: 100%;">
+                            <label>Campaign Name: <input type="text" class="campaign-name-edit" value="${campaign.name}"></label>
+                            <label>Admin Description: <textarea class="campaign-description-edit" placeholder="For internal reference...">${campaign.description || ''}</textarea></label>
+                            <label>Banner Message: <input type="text" class="campaign-message-edit" placeholder="Displayed on the page..." value="${campaign.message || ''}" maxlength="40" style="width: 100%;"></label>
+                            <div style="display: flex; gap: 10px;">
+                                <label>Start Date: <input type="date" class="campaign-start-edit" value="${campaign.startDate.slice(0, 10)}"></label>
+                                <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
+                            </div>
+                            <h4>Links</h4>
+                            <div class="campaign-links-header">
+                                <div class="link-order-header">Move</div>
+                                <div class="link-display-header">Display/Hide</div>
+                                <div class="link-name-header">Link</div>
+                            </div>
+                            <div class="campaign-links-edit">${campaignLinksHtml}</div>
+                            <div class="button-container">
+                                <button class="save-edit-campaign">Save Campaign</button>
+                                <button class="cancel-edit-campaign">Cancel</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (event.target.classList.contains('delete-campaign')) {
                     if (confirm('Are you sure you want to delete this campaign?')) {
-                        fetch(`/api/campaigns/${campaignId}`, { method: 'DELETE' })
-                            .then((res) => {
-                                if(res.ok) {
-                                    // Remove from local array and re-render
-                                    const index = campaigns.findIndex(c => c.id === campaignId);
-                                    if (index > -1) {
-                                        campaigns.splice(index, 1);
-                                        renderCampaigns();
-                                    }
-                                } else {
-                                    alert('Failed to delete campaign.');
-                                }
-                            });
-                    }
-                    return;
-                }
-
-                if(targetButton && targetButton.classList.contains('edit-campaign-btn')) {
-                    const campaign = campaigns.find(c => c.id === campaignId);
-                    if (campaign) {
-                        openEditCampaignModal(campaign);
+                        fetch('/api/admin/config').then(res => res.json()).then(config => {
+                            let newConfig = { ...config };
+                            newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
+                            saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
+                        });
                     }
                 }
             });
-        }).catch(error => console.error('Error loading campaign data:', error));
+        });
     }
 
     function renderAnalyticsTab(config) {
-        adminContentDiv.innerHTML = `
-            <div id="analytics-tab" class="tab-content active">
-                <h2>Analytics Overview</h2>
-                <p>Coming soon: Analytics features will be available here.</p>
-            </div>
-        `;
-    }
-
-    function saveConfig(newConfig, triggerElement) {
-        const saveButton = triggerElement.closest('.button-container')?.querySelector('button');
-        if (saveButton) {
-            saveButton.textContent = 'Saving...';
-            saveButton.disabled = true;
+        let tenantFilter = '';
+        if (currentUser.role === 'master-admin') {
+            tenantFilter = `
+                <select id="tenant-analytics-filter">
+                    <option value="">All Tenants</option>
+                </select>
+            `;
         }
 
-        return fetch('/api/admin/config', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newConfig)
-        }).then(response => {
-            if (!response.ok) throw new Error(`Error: ${response.statusText}`);
-            return response.json();
-        }).then(data => {
-            Object.assign(config, newConfig);
-            if (saveButton) {
-                saveButton.textContent = 'Saved!';
-                setTimeout(() => {
-                    saveButton.textContent = 'Save';
-                    saveButton.disabled = false;
-                }, 2000);
+        adminContentDiv.innerHTML = `
+            <div id="analytics-tab" class="tab-content active">
+                <h2>Analytics</h2>
+                <p style="font-size: 0.9rem; color: #606770;">
+                    Shows the total number of visitors to the landing page, i.e. people who have opened the landing page using the QR code or not. "Abandoned" shows people who did not go further than the landing page and didn't click on a link. "Followed links" show the actual link or links they followed. One visitor might click on multiple links. 
+                    You can choose to see the results per day using the date filter, or per specific campaign (those will filter by campaign date automatically). If you want the total number of the period, instead of a day-by-day breakdown, click the "Cumulative" checkbox. 
+                    The visitors by hour show the time of the day the visitor opened the page, cumulative over the days in the time period. This highlights the busier engagement period during a campaign for example.
+                </p>
+                <div id="analytics-filters" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                    ${tenantFilter}
+                    <select id="date-filter">
+                        <option value="30">Last 30 days</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="1">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="90">Last 3 months</option>
+                        <option value="180">Last 6 months</option>
+                        <option value="365">Last 12 months</option>
+                        <option value="all">All time</option>
+                    </select>
+                    <select id="campaign-filter"></select>
+                    <label><input type="checkbox" id="cumulative-checkbox"> Cumulative</label>
+                    <button id="export-analytics">Export Graphs</button>
+                    <button id="refresh-analytics" title="Refresh Data">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </button>
+                </div>
+                <div id="analytics-charts">
+                    <h3>Visitor Engagement</h3>
+                    <div style="height: 200px; margin-bottom: 20px;"><canvas id="visits-chart"></canvas></div>
+                    <h3>Clicks per Link</h3>
+                    <div style="height: 400px; margin-bottom: 20px;"><canvas id="clicks-chart"></canvas></div>
+                    <h3>Visitors by Hour</h3>
+                    <div style="height: 300px; margin-bottom: 20px;"><canvas id="hourly-chart"></canvas></div>
+                </div>
+                <small>All times are in Australia/Sydney timezone.</small>
+            </div>
+        `;
+        
+        if (currentUser.role === 'master-admin') {
+            const tenantAnalyticsFilter = document.getElementById('tenant-analytics-filter');
+            fetch('/api/tenants')
+                .then(res => res.json())
+                .then(tenants => {
+                    tenants.forEach(tenant => {
+                        tenantAnalyticsFilter.innerHTML += `<option value="${tenant.id}">${tenant.displayName}</option>`;
+                    });
+                });
+        }
+
+        document.getElementById('export-analytics').addEventListener('click', () => {
+            const chartsContainer = document.getElementById('analytics-charts');
+            html2canvas(chartsContainer).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'analytics-export.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
+
+        const dateFilter = document.getElementById('date-filter');
+        const campaignFilter = document.getElementById('campaign-filter');
+        const cumulativeCheckbox = document.getElementById('cumulative-checkbox');
+        const refreshButton = document.getElementById('refresh-analytics');
+
+        refreshButton.addEventListener('click', () => {
+            fetchAnalyticsData();
+        });
+        
+        const fetchAnalyticsData = () => {
+            let url = '/api/analytics';
+            if (currentUser.role === 'master-admin') {
+                const tenantId = document.getElementById('tenant-analytics-filter').value;
+                url = `/api/admin/analytics?tenantId=${tenantId}`;
             }
-        }).catch(error => {
-            console.error('Error saving config:', error);
-            if (saveButton) {
-                saveButton.textContent = 'Save';
-                saveButton.disabled = false;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(analytics => {
+                    let allConfigs = null;
+                    if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
+                        fetch('/api/admin/all-configs')
+                            .then(res => res.json())
+                            .then(configs => {
+                                allConfigs = configs;
+                                processAnalytics(analytics, allConfigs);
+                            });
+                    } else {
+                        processAnalytics(analytics);
+                    }
+                });
+        };
+
+        const processAnalytics = (analytics, allConfigs = null) => {
+            let processedAnalytics = analytics;
+            if (currentUser.role === 'master-admin' && !document.getElementById('tenant-analytics-filter').value) {
+                processedAnalytics = Object.values(analytics).reduce((acc, tenantAnalytics) => {
+                    if (tenantAnalytics) {
+                        acc.visits.push(...tenantAnalytics.visits);
+                        acc.clicks.push(...tenantAnalytics.clicks);
+                    }
+                    return acc;
+                }, { visits: [], clicks: [] });
             }
+            filterAnalyticsData(processedAnalytics, allConfigs);
+        };
+
+        const getSydneyHour = (utcIsoString) => {
+            const date = new Date(utcIsoString);
+            const sydneyTime = new Date(date.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }));
+            return sydneyTime.getHours();
+        };
+
+        const updateAnalyticsCharts = (analyticsData, allConfigs) => {
+            const visitsChartCanvas = document.getElementById('visits-chart');
+            const clicksChartCanvas = document.getElementById('clicks-chart');
+            const hourlyChartCanvas = document.getElementById('hourly-chart');
+            if (visitsChartCanvas.chart) visitsChartCanvas.chart.destroy();
+            if (clicksChartCanvas.chart) clicksChartCanvas.chart.destroy();
+            if (hourlyChartCanvas.chart) hourlyChartCanvas.chart.destroy();
+
+            const isCumulative = cumulativeCheckbox.checked;
+
+            if (isCumulative) {
+                const totalVisits = analyticsData.visits.length;
+                const totalClicks = analyticsData.clicks.length;
+                const abandonedVisits = totalVisits - new Set(analyticsData.clicks.map(c => c.ip)).size;
+
+                visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Visitor Engagement'],
+                        datasets: [
+                            {
+                                label: `Followed Link (${totalClicks} - ${totalVisits > 0 ? ((totalClicks / totalVisits) * 100).toFixed(1) : 0}%)`,
+                                data: [totalClicks],
+                                backgroundColor: config.theme.secondaryColor
+                            },
+                            {
+                                label: `Abandoned (${abandonedVisits} - ${totalVisits > 0 ? ((abandonedVisits / totalVisits) * 100).toFixed(1) : 0}%)`,
+                                data: [abandonedVisits],
+                                backgroundColor: config.theme.primaryColor
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { x: { stacked: true }, y: { stacked: true } }
+                    }
+                });
+            } else {
+                const dataByDay = {};
+                analyticsData.visits.forEach(v => {
+                    const day = new Date(v.timestamp).toLocaleDateString('en-CA'); 
+                    if (!dataByDay[day]) dataByDay[day] = { visits: 0, clicks: 0 };
+                    dataByDay[day].visits++;
+                });
+                analyticsData.clicks.forEach(c => {
+                    const day = new Date(c.timestamp).toLocaleDateString('en-CA');
+                    if (!dataByDay[day]) dataByDay[day] = { visits: 0, clicks: 0 };
+                    dataByDay[day].clicks++;
+                });
+
+                const sortedDays = Object.keys(dataByDay).sort();
+                const followedData = sortedDays.map(day => dataByDay[day].clicks);
+                const abandonedData = sortedDays.map(day => dataByDay[day].visits - dataByDay[day].clicks);
+
+                visitsChartCanvas.chart = new Chart(visitsChartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedDays,
+                        datasets: [
+                            {
+                                label: 'Followed Link',
+                                data: followedData,
+                                backgroundColor: config.theme.secondaryColor
+                            },
+                            {
+                                label: 'Abandoned',
+                                data: abandonedData,
+                                backgroundColor: config.theme.primaryColor
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+                    }
+                });
+            }
+        
+            const clicksPerLink = {};
+            analyticsData.clicks.forEach(click => {
+                clicksPerLink[click.linkId] = (clicksPerLink[click.linkId] || 0) + 1;
+            });
+
+            const sortedLinks = Object.entries(clicksPerLink).sort(([,a],[,b]) => b-a);
+            
+            const getLinkName = (linkId) => {
+                if (linkId.startsWith('social-')) {
+                    const name = linkId.replace('social-', '');
+                    return name.charAt(0).toUpperCase() + name.slice(1);
+                }
+                if (currentUser.role === 'master-admin' && allConfigs) {
+                    for (const tenantId in allConfigs) {
+                        const link = allConfigs[tenantId].links.find(l => l.id === linkId);
+                        if (link) return link.text;
+                    }
+                }
+                return config.links.find(l => l.id === linkId)?.text || 'Unknown Link';
+            };
+
+            const linkLabels = sortedLinks.map(([linkId]) => getLinkName(linkId));
+            const clickCounts = sortedLinks.map(([,count]) => count);
+
+            clicksChartCanvas.chart = new Chart(clicksChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: linkLabels,
+                    datasets: [{
+                        label: 'Clicks per Link',
+                        data: clickCounts,
+                        backgroundColor: config.theme.secondaryColor
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                }
+            });
+
+            const hourlyVisits = Array(24).fill(0);
+            const hourlyClicks = Array(24).fill(0);
+            analyticsData.visits.forEach(visit => {
+                hourlyVisits[getSydneyHour(visit.timestamp)]++;
+            });
+            analyticsData.clicks.forEach(click => {
+                hourlyClicks[getSydneyHour(click.timestamp)]++;
+            });
+
+            hourlyChartCanvas.chart = new Chart(hourlyChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    datasets: [
+                        {
+                            label: 'Followed Links',
+                            data: hourlyClicks,
+                            backgroundColor: config.theme.secondaryColor
+                        },
+                        {
+                            label: 'Abandoned Visits',
+                            data: hourlyVisits.map((v, i) => v - (hourlyClicks[i] || 0)),
+                            backgroundColor: config.theme.primaryColor
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
+                    }
+                }
+            });
+        };
+
+        const filterAnalyticsData = (analytics, allConfigs) => {
+            const selectedDateFilter = dateFilter.value;
+            const selectedCampaignFilter = campaignFilter.value;
+
+            let filteredAnalytics = { visits: [...analytics.visits], clicks: [...analytics.clicks] };
+
+            const now = new Date();
+            let startDate = new Date();
+            let endDate = new Date(); 
+
+            if (selectedDateFilter === 'all') {
+                startDate = new Date(0);
+            } else if (selectedDateFilter === 'yesterday') {
+                startDate.setDate(now.getDate() - 1);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setDate(now.getDate() - 1);
+                endDate.setHours(23, 59, 59, 999);
+            } else if (selectedDateFilter === '1') { 
+                startDate.setHours(0, 0, 0, 0);
+            } else {
+                startDate.setDate(now.getDate() - parseInt(selectedDateFilter));
+            }
+            
+            filteredAnalytics.visits = filteredAnalytics.visits.filter(v => {
+                const visitDate = new Date(v.timestamp);
+                return visitDate >= startDate && visitDate <= endDate;
+            });
+            filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => {
+                const clickDate = new Date(c.timestamp);
+                return clickDate >= startDate && clickDate <= endDate;
+            });
+
+            const currentCampaignSelection = campaignFilter.value;
+            campaignFilter.innerHTML = '<option value="all">All Campaigns</option>';
+            config.campaigns.forEach(c => {
+                if (new Date(c.endDate) >= startDate) {
+                    campaignFilter.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                }
+            });
+            campaignFilter.value = currentCampaignSelection;
+
+            if (campaignFilter.value !== 'all') {
+                const campaign = config.campaigns.find(c => c.id === campaignFilter.value);
+                if (campaign) {
+                    const campaignStart = new Date(campaign.startDate);
+                    const campaignEnd = new Date(campaign.endDate);
+                    filteredAnalytics.visits = filteredAnalytics.visits.filter(v => new Date(v.timestamp) >= campaignStart && new Date(v.timestamp) <= campaignEnd);
+                    filteredAnalytics.clicks = filteredAnalytics.clicks.filter(c => new Date(c.timestamp) >= campaignStart && new Date(c.timestamp) <= campaignEnd);
+                }
+            }
+
+            updateAnalyticsCharts(filteredAnalytics, allConfigs);
+        };
+
+        const filterAndRender = () => fetchAnalyticsData();
+        dateFilter.addEventListener('change', filterAndRender);
+        campaignFilter.addEventListener('change', filterAndRender);
+        cumulativeCheckbox.addEventListener('change', filterAndRender);
+        if (currentUser.role === 'master-admin') {
+            document.getElementById('tenant-analytics-filter').addEventListener('change', filterAndRender);
+        }
+        filterAndRender(); 
+    }
+
+    function showSaveConfirmation(button) {
+        if (!button) return;
+        const originalText = button.textContent;
+        button.classList.add('success');
+        button.textContent = 'Saved!';
+        setTimeout(() => {
+            button.classList.remove('success');
+            button.textContent = originalText;
+        }, 2000);
+    }
+
+    function saveConfig(config, button) {
+        return fetch('/api/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        }).then(res => {
+            if (res.ok && button) {
+                showSaveConfirmation(button);
+            }
+            return res;
         });
     }
 });
