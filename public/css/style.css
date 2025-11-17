@@ -25,7 +25,7 @@ body {
 }
 
 .main-container {
-    width: 95%;
+    width: 90%;
     max-width: 1400px;
     margin: 20px auto;
     background-color: var(--primary-background);
@@ -119,14 +119,7 @@ button.success, .button.success {
 
 
 /* III. Admin Interface (Wide-Screen Specific) */
-.admin-container {
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding: 0;
-    box-shadow: none;
-    border: none;
-}
+
 
 .tabs {
     display: flex;
