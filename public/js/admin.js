@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const isCurrentUser = user.id === currentUser.id;
                         
                         userEl.innerHTML = `
-                            <div class="user-col-email"><b>${user.email}<b></div>
+                            <div class="user-col-email">${user.email}</div>
                             <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
                             <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
                             <div class="user-col-status">
@@ -325,7 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     messageEl.textContent = 'Invite sent successfully!';
                     loadAdminContent('users');
                 });
-            });
         }
     }
     
@@ -944,23 +943,23 @@ document.addEventListener('DOMContentLoaded', () => {
         campaignDateFilter.addEventListener('change', fetchAndDisplayCampaigns);
 
         campaignsList.addEventListener('click', (event) => {
-            const campaignId = event.target.closest('.campaign-admin')?.dataset.id;
-            if (!campaignId) return;
+            const campaignAdmin = event.target.closest('.campaign-admin');
+            if (!campaignAdmin) return;
+            const campaignId = campaignAdmin.dataset.id;
 
             fetch('/api/admin/config').then(res => res.json()).then(config => {
                 let newConfig = { ...config };
                 const campaign = newConfig.campaigns.find(c => c.id === campaignId);
 
                 if (event.target.classList.contains('save-edit-campaign')) {
-                    const campaignAdmin = event.target.closest('.campaign-admin');
                     const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
                     const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
-                    
+
                     if (newEndDate < newStartDate) {
                         alert('Error: End date cannot be before the start date.');
                         return;
                     }
-                    newEndDate.setHours(23, 59, 59, 999); 
+                    newEndDate.setHours(23, 59, 59, 999);
 
                     const overlaps = newConfig.campaigns.some(c => {
                         if (c.id === campaignId) return false;
@@ -979,10 +978,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     campaign.message = campaignAdmin.querySelector('.campaign-message-edit').value;
                     campaign.startDate = newStartDate.toISOString();
                     campaign.endDate = newEndDate.toISOString();
-                    
+
                     const linkRows = campaignAdmin.querySelectorAll('.campaign-link-row');
                     campaign.links = Array.from(linkRows)
-                        .filter(row => row.querySelector('input[type="checkbox"]').checked)
+                        .filter(row => row.querySelector('.include-link-toggle').checked)
                         .map(row => row.dataset.id);
 
                     saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
@@ -993,30 +992,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (event.target.classList.contains('edit-campaign')) {
-                    const campaignAdmin = event.target.closest('.campaign-admin');
-                    
                     const campaignLinkIds = new Set(campaign.links);
+
                     const sortedLinksForCampaign = [
                         ...campaign.links.map(id => config.links.find(l => l.id === id)).filter(Boolean),
                         ...config.links.filter(l => !campaignLinkIds.has(l.id))
                     ];
 
-                    const campaignLinksHtml = sortedLinksForCampaign.map(link => `
-                        <div class="link-admin campaign-link-row ${!campaign.links.includes(link.id) ? 'inactive' : ''}" data-id="${link.id}">
+                    const campaignLinksHtml = sortedLinksForCampaign.map((link, index) => {
+                        const isIncluded = campaign.links.includes(link.id);
+                        return `
+                        <div class="campaign-link-row ${!isIncluded ? 'inactive' : ''}" data-id="${link.id}">
                             <div class="link-order">
-                                <button class="move-link-up">▲</button>
-                                <button class="move-link-down">▼</button>
+                                <button class="move-link-up" ${index === 0 ? 'disabled' : ''}>▲</button>
+                                <button class="move-link-down" ${index === sortedLinksForCampaign.length - 1 ? 'disabled' : ''}>▼</button>
                             </div>
-                            <label class="switch" style="width: auto; justify-self: center;">
-                                <input type="checkbox" class="hide-link-toggle" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                            <label class="switch">
+                                <input type="checkbox" class="include-link-toggle" ${isIncluded ? 'checked' : ''}>
                                 <span class="slider round"></span>
                             </label>
-                            <div class="link" style="background: none; box-shadow: none; padding: 0;">
-                                <img src="${link.icon}" alt="${link.text}" style="height: 64px; vertical-align: middle;">
-                                <span style="font-weight: bold; margin-left: 10px;">${link.text}</span>
+                            <div class="link-info">
+                                <img src="${link.icon}" alt="${link.text}">
+                                <span>${link.text}</span>
                             </div>
                         </div>
-                    `).join('');
+                    `}).join('');
+
 
                     campaignAdmin.innerHTML = `
                         <div style="width: 100%;">
@@ -1028,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <label>End Date: <input type="date" class="campaign-end-edit" value="${campaign.endDate.slice(0, 10)}"></label>
                             </div>
                             <h4>Choose the links to display during this campaign</h4>
-                            <div class="link-admin-header" style="grid-template-columns: 40px 60px 1fr;">
+                            <div class="campaign-link-header">
                                 <div>Move</div>
                                 <div>Show</div>
                                 <div>Link Name</div>
@@ -1040,15 +1041,46 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                     `;
+
+                    const linksEditContainer = campaignAdmin.querySelector('.campaign-links-edit');
+
+                    linksEditContainer.addEventListener('click', e => {
+                        const targetRow = e.target.closest('.campaign-link-row');
+                        if (!targetRow) return;
+
+                        let rows = Array.from(linksEditContainer.querySelectorAll('.campaign-link-row'));
+                        const rowIndex = rows.findIndex(row => row.dataset.id === targetRow.dataset.id);
+
+                        if (e.target.classList.contains('move-link-up') && rowIndex > 0) {
+                            linksEditContainer.insertBefore(targetRow, rows[rowIndex - 1]);
+                        }
+                        if (e.target.classList.contains('move-link-down') && rowIndex < rows.length - 1) {
+                            linksEditContainer.insertBefore(rows[rowIndex + 1], targetRow);
+                        }
+                        
+                        rows = Array.from(linksEditContainer.querySelectorAll('.campaign-link-row'));
+                        rows.forEach((row, index) => {
+                            row.querySelector('.move-link-up').disabled = index === 0;
+                            row.querySelector('.move-link-down').disabled = index === rows.length - 1;
+                        });
+                    });
+                
+                    linksEditContainer.addEventListener('change', e => {
+                        if (e.target.classList.contains('include-link-toggle')) {
+                            const row = e.target.closest('.campaign-link-row');
+                            if (e.target.checked) {
+                                row.classList.remove('inactive');
+                            } else {
+                                row.classList.add('inactive');
+                            }
+                        }
+                    });
                 }
 
                 if (event.target.classList.contains('delete-campaign')) {
                     if (confirm('Are you sure you want to delete this campaign?')) {
-                        fetch('/api/admin/config').then(res => res.json()).then(config => {
-                            let newConfig = { ...config };
-                            newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
-                            saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
-                        });
+                        newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
+                        saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
                     }
                 }
             });
