@@ -1,4 +1,6 @@
 {
-    "visits": [],
-    "clicks": []
+    "tenant_1": {
+        "visits": [],
+        "clicks": []
+    }
 }

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - linkreach.xyz</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <div class="login-container">
+            <div id="invite-banner" class="message info" style="display: none;">
+                <p><strong>Welcome to linkreach.xyz!</strong> Your account has been created.</p>
+                <p>You can now use this service to create and manage tracked links for your campaigns. Log in below to get started.</p>
+            </div>
+            <header>
+                <img src="/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="height: 112px; margin-bottom: 20px;">
+                <h1>Log in to your account</h1>
+                <p>Enter your email address below to receive a magic link to sign in.</p>
+            </header>
+            
+            <main>
+                <form id="login-form">
+                    <input type="email" id="email" placeholder="Enter your email" required>
+                    <button type="submit" class="button">Send Magic Link</button>
+                </form>
+                <p id="message"></p>
+            </main>
+        </div>
+        <footer>
+            <a href="/index.html">Home Page</a>
+            <a href="/login">Get Started</a>
+            <a href="#">About Us</a>
+        </footer>
+    </div>
+    <script src="js/login.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('invited') === 'true') {
+            document.getElementById('invite-banner').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

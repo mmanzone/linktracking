@@ -1,0 +1,10 @@
+[
+  {
+    "id": "tenant_1",
+    "name": "master",
+    "displayName": "Master Admin",
+    "users": [
+      "user_1"
+    ]
+  }
+]
