@@ -512,64 +512,79 @@ app.post('/api/click', async (req, res) => {
 });
 
 // --- User Routes ---
-app.get('/api/users/:id', authenticate, async (req, res) => {
-    const { id } = req.params;
-    const user = await redis.get(`user:${id}`);
-    res.json(user);
-});
 
+// GET /api/admin/users - Master admin: Get all users
 app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) => {
     const userKeys = await redis.keys('user:*');
     const users = await Promise.all(userKeys.map(key => redis.get(key)));
     res.json(users.filter(Boolean));
 });
 
-app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) => {
-    const userKeys = await redis.keys('user:*');
-    const users = await Promise.all(userKeys.map(key => redis.get(key)));
-    res.json(users);
+// GET /api/users - Tenant admin: Get users for their tenant
+app.get('/api/users', authenticate, async (req, res) => {
+    const tenant = req.tenant;
+    if (!tenant || !tenant.users) {
+        return res.json([]);
+    }
+    const userKeys = tenant.users;
+    const users = await Promise.all(userKeys.map(async userId => {
+        const allUserKeys = await redis.keys('user:*');
+        for (const userKey of allUserKeys) {
+            const user = await redis.get(userKey);
+            if (user && user.id === userId) {
+                return user;
+            }
+        }
+        return null;
+    }));
+    res.json(users.filter(Boolean));
 });
 
+// POST /api/users/invite - Invite a new user
 app.post('/api/users/invite', authenticate, async (req, res) => {
     const { email, tenantId, sendWelcomeEmail } = req.body;
-    let tenant;
+    let tenantToInviteTo;
 
-    // Check if the tenant exists
-    if (tenantId) {
-        tenant = await redis.get(`tenant:${tenantId}`);
-    }
-
-    if (tenant) {
-        // Add user to existing tenant
-        const userId = `user_${Date.now()}`;
-        await redis.set(`user:${email}`, {
-            id: userId,
-            email,
-            tenants: [tenant.id],
-            role: 'user',
-        });
-        
-        tenant.users.push(userId);
-        await redis.set(`tenant:${tenant.name}`, tenant);
+    if (req.user.role === 'master-admin' && tenantId) {
+        const tenantKeys = await redis.keys('tenant:*');
+        for (const key of tenantKeys) {
+            const t = await redis.get(key);
+            if (t.id === tenantId) {
+                tenantToInviteTo = t;
+                break;
+            }
+        }
     } else {
-        // Create new user
+        tenantToInviteTo = req.tenant;
+    }
+
+    if (!tenantToInviteTo) {
+        return res.status(404).json({ success: false, message: 'Tenant not found.' });
+    }
+
+    const existingUser = await redis.get(`user:${email}`);
+    if (existingUser) {
+        if (!existingUser.tenants.includes(tenantToInviteTo.id)) {
+            existingUser.tenants.push(tenantToInviteTo.id);
+            await redis.set(`user:${email}`, existingUser);
+        }
+    } else {
         const userId = `user_${Date.now()}`;
         await redis.set(`user:${email}`, {
             id: userId,
             email,
-            tenants: [tenant.id],
+            tenants: [tenantToInviteTo.id],
             role: 'user',
         });
-        
-        tenant.users.push(userId);
-        await redis.set(`tenant:${tenant.name}`, tenant);
+        tenantToInviteTo.users.push(userId);
+        await redis.set(`tenant:${tenantToInviteTo.name}`, tenantToInviteTo);
     }
 
-    // Send invite email
     if (sendWelcomeEmail) {
         try {
             const baseUrl = getBaseUrl(req);
-            await resend.emails.send({
+        // Use the normalized name in the welcome URL
+        await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
                 subject: `Welcome to linkreach.xyz, ${displayName}!`,
@@ -591,32 +606,188 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
 `,
             });
         } catch (error) {
-            console.error('Error sending invite email:', error);
+            console.error('Error sending welcome email:', error);
+            // We don't want to fail the whole request if the email fails
+        }
+    }
+    
+    res.json({ success: true });
+});
+
+// POST /api/users/:id/send-magic-link - Send a magic link to a user
+app.post('/api/users/:id/send-magic-link', authenticate, async (req, res) => {
+    const { id } = req.params;
+    const userKeys = await redis.keys('user:*');
+    let user = null;
+    for (const key of userKeys) {
+        const u = await redis.get(key);
+        if (u.id === id) {
+            user = u;
+            break;
         }
     }
 
-    res.json({ success: true });
+    if (user) {
+        const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '15m' });
+        // Dynamically generate the magic link URL
+        const host = req.headers.host;
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
+
+        try {
+          await resend.emails.send({
+            from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+            to: user.email,
+            subject: 'Your Login Link for linkreach.xyz',
+            html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
+    </div>
+  <h2>Log in to your account</h2>
+  <p>Hello,</p>
+  <p>You requested a link to log in to your account. Click the button below to sign in.</p>
+  <p style="margin: 20px 0;">
+    <a href="${magicLink}" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
+  </p>
+  <p>This link will expire in 15 minutes. If you did not request this email, you can safely ignore it.</p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
+  <hr style="border: none; border-top: 1px solid #eee;">
+  <p style="font-size: 0.8em; color: #939598;">
+    If you're having trouble with the button above, copy and paste the URL below into your web browser:<br>
+    <a href="${magicLink}" style="color: #52b8da;">${magicLink}</a>
+  </p>
+</div>
+`,
+          });
+          console.log(`Magic link sent to: ${user.email}`);
+          res.json({ success: true, message: 'Magic link sent.' });
+        } catch (error) {
+          console.error('Error sending email:', error); // Log the actual error
+          res.status(500).json({ success: false, message: 'Error sending email.' });
+        }
+    } else {
+        res.status(404).json({ success: false, message: 'User not found.' });
+    }
 });
 
+// PUT /api/users/:id - Update a user's details
 app.put('/api/users/:id', authenticate, async (req, res) => {
     const { id } = req.params;
     const { email, firstName, lastName, disabled } = req.body;
+    const userKeys = await redis.keys('user:*');
+    let userKeyToUpdate = null;
+    let userToUpdate = null;
+    for (const key of userKeys) {
+        const u = await redis.get(key);
+        if (u.id === id) {
+            userKeyToUpdate = key;
+            userToUpdate = u;
+            break;
+        }
+    }
 
-    const user = await redis.get(`user:${id}`);
-    if (user) {
-      user.email = email;
-      user.firstName = firstName;
-      user.lastName = lastName;
-      user.disabled = disabled;
-      await redis.set(`user:${id}`, user);
+    if (userToUpdate) {
+        userToUpdate.firstName = firstName;
+        userToUpdate.lastName = lastName;
+        userToUpdate.disabled = disabled;
+        if (email !== userToUpdate.email) {
+            await redis.del(userKeyToUpdate);
+            userToUpdate.email = email;
+            await redis.set(`user:${email}`, userToUpdate);
+        } else {
+            await redis.set(userKeyToUpdate, userToUpdate);
+        }
     }
     res.json({ success: true });
 });
 
-app.delete('/api/users/:id', authenticate, requireMasterAdmin, async (req, res) => {
+// DELETE /api/users/:id - Delete a user
+app.delete('/api/users/:id', authenticate, async (req, res) => {
     const { id } = req.params;
-    await redis.del(`user:${id}`);
+    const userKeys = await redis.keys('user:*');
+    let userKeyToDelete = null;
+    let userToDelete = null;
+    for (const key of userKeys) {
+        const u = await redis.get(key);
+        if (u.id === id) {
+            userKeyToDelete = key;
+            userToDelete = u;
+            break;
+        }
+    }
+
+    if (userToDelete) {
+        await redis.del(userKeyToDelete);
+        for (const tenantId of userToDelete.tenants) {
+            const tenantKeys = await redis.keys('tenant:*');
+            for (const tenantKey of tenantKeys) {
+                const t = await redis.get(tenantKey);
+                if (t.id === tenantId) {
+                    t.users = t.users.filter(userId => userId !== id);
+                    await redis.set(tenantKey, t);
+                    break; 
+                }
+            }
+        }
+    }
     res.json({ success: true });
+});
+
+app.post('/api/config', authenticate, async (req, res) => {
+  const { tenant } = req.query;
+  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
+
+  const tenantNormalized = String(tenant || '').toUpperCase();
+  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
+  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+  
+  const config = await redis.get(`config:${tenantData.id}`);
+  if (!config) return res.status(404).json({ error: 'Configuration not found for tenant.' });
+
+  res.json(config);
+});
+
+app.post('/api/visit', async (req, res) => {
+  const { tenant } = req.query;
+  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
+  const tenantNormalized = String(tenant || '').toUpperCase();
+  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
+  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+
+  const analytics = await redis.get(`analytics:${tenantData.id}`);
+  if (!analytics) return res.sendStatus(200);
+
+  analytics.visits.push({
+    timestamp: new Date().toISOString(),
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    userAgent: req.headers['user-agent'],
+  });
+  await redis.set(`analytics:${tenantData.id}`, analytics);
+  res.sendStatus(200);
+});
+
+app.post('/api/click', async (req, res) => {
+  const { tenant } = req.query;
+  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
+  
+  const tenantNormalized = String(tenant || '').toUpperCase();
+  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
+  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+
+  const { linkId } = req.body;
+  const analytics = await redis.get(`analytics:${tenantData.id}`);
+  if (!analytics) return res.sendStatus(200);
+
+  analytics.clicks.push({
+    timestamp: new Date().toISOString(),
+    linkId,
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    userAgent: req.headers['user-agent'],
+  });
+  await redis.set(`analytics:${tenantData.id}`, analytics);
+  res.sendStatus(200);
 });
 
 app.listen(3000, () => {
