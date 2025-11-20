@@ -1285,7 +1285,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let url = '/api/analytics';
             if (currentUser.role === 'master-admin') {
                 const tenantId = document.getElementById('tenant-analytics-filter').value;
-                url = `/api/admin/analytics?tenantId=${tenantId}`;
+                if (tenantId) {
+                    url = `/api/admin/analytics?tenantId=${tenantId}`;
+                } else {
+                    url = '/api/admin/analytics';
+                }
             }
             
             fetch(url)

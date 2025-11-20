@@ -460,6 +460,12 @@ app.post('/api/config', authenticate, async (req, res) => {
   res.sendStatus(200);
 });
 
+app.get('/api/analytics', authenticate, async (req, res) => {
+    const { tenantId } = req;
+    const analytics = await redis.get(`analytics:${tenantId}`);
+    res.json(analytics);
+});
+
 app.post('/api/visit', async (req, res) => {
   const { tenant } = req.query;
   const { path, referrer } = req.body;
