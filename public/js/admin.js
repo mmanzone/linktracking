@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentTenant = data.tenant;
             
             document.getElementById('admin-title').textContent = currentTenant.displayName;
+            document.getElementById('preview-link').href = `/${currentTenant.name}`;
             document.getElementById('logout-btn').textContent = `Logout ${currentUser.firstName || ''} ${currentUser.lastName || ''}`;
             
             if (!currentUser.firstName || !currentUser.lastName) {
