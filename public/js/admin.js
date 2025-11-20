@@ -1143,13 +1143,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             data: {
                                 labels: ['Visitor Engagement'],
                                 datasets: [{
-                                    label: 'Followed Link',
+                                    label: `Followed Link (${visitorsWhoClicked.size} - ${clickPercentage}%)`,
                                     data: [visitorsWhoClicked.size],
-                                    backgroundColor: '#28a745'
+                                    backgroundColor: config.theme.secondaryColor || '#28a745'
                                 }, {
-                                    label: 'Abandoned',
+                                    label: `Abandoned (${abandonedVisits})`,
                                     data: [abandonedVisits],
-                                    backgroundColor: '#dc3545'
+                                    backgroundColor: config.theme.primaryColor || '#dc3545'
                                 }]
                             },
                             options: {

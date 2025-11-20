@@ -460,10 +460,25 @@ app.post('/api/config', authenticate, async (req, res) => {
   res.sendStatus(200);
 });
 
+app.get('/api/admin/all-configs', authenticate, requireMasterAdmin, async (req, res) => {
+    const tenantKeys = await redis.keys('tenant:*');
+    const allConfigs = {};
+    for (const key of tenantKeys) {
+        const tenant = await redis.get(key);
+        if (tenant && tenant.id) {
+            const config = await redis.get(`config:${tenant.id}`);
+            if (config) {
+                allConfigs[tenant.id] = config;
+            }
+        }
+    }
+    res.json(allConfigs);
+});
+
 app.get('/api/analytics', authenticate, async (req, res) => {
-    const { tenantId } = req;
-    const analytics = await redis.get(`analytics:${tenantId}`);
-    res.json(analytics);
+  const { tenantId } = req;
+  const analytics = await redis.get(`analytics:${tenantId}`);
+  res.json(analytics);
 });
 
 app.post('/api/visit', async (req, res) => {
