@@ -519,24 +519,82 @@ app.get('/api/users/:id', authenticate, async (req, res) => {
 });
 
 app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) => {
-  const userKeys = await redis.keys('user:*');
-  const users = await Promise.all(userKeys.map(key => redis.get(key)));
-  res.json(users);
+    const userKeys = await redis.keys('user:*');
+    const users = await Promise.all(userKeys.map(key => redis.get(key)));
+    res.json(users.filter(Boolean));
+});
+
+app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) => {
+    const userKeys = await redis.keys('user:*');
+    const users = await Promise.all(userKeys.map(key => redis.get(key)));
+    res.json(users);
 });
 
 app.post('/api/users/invite', authenticate, async (req, res) => {
-    const { email } = req.body;
-    const userId = `user_${Date.now()}`;
-  
-    await redis.set(`user:${email}`, {
-      id: userId,
-      email,
-      tenants: [],
-      role: 'user',
-      disabled: false,
-      lastLogin: null
-    });
-    
+    const { email, tenantId, sendWelcomeEmail } = req.body;
+    let tenant;
+
+    // Check if the tenant exists
+    if (tenantId) {
+        tenant = await redis.get(`tenant:${tenantId}`);
+    }
+
+    if (tenant) {
+        // Add user to existing tenant
+        const userId = `user_${Date.now()}`;
+        await redis.set(`user:${email}`, {
+            id: userId,
+            email,
+            tenants: [tenant.id],
+            role: 'user',
+        });
+        
+        tenant.users.push(userId);
+        await redis.set(`tenant:${tenant.name}`, tenant);
+    } else {
+        // Create new user
+        const userId = `user_${Date.now()}`;
+        await redis.set(`user:${email}`, {
+            id: userId,
+            email,
+            tenants: [tenant.id],
+            role: 'user',
+        });
+        
+        tenant.users.push(userId);
+        await redis.set(`tenant:${tenant.name}`, tenant);
+    }
+
+    // Send invite email
+    if (sendWelcomeEmail) {
+        try {
+            const baseUrl = getBaseUrl(req);
+            await resend.emails.send({
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                to: email,
+                subject: `Welcome to linkreach.xyz, ${displayName}!`,
+                html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
+    </div>
+  <h2>Your linkreach.xyz account is ready!</h2>
+  <p>Hello,</p>
+  <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
+  <p>Your public landing page is available at: <a href="${baseUrl}/${normalizedName}">${baseUrl}/${normalizedName}</a></p>
+  <p style="margin: 20px 0;">
+    <a href="${baseUrl}/login" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
+  </p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
+</div>
+`,
+            });
+        } catch (error) {
+            console.error('Error sending invite email:', error);
+        }
+    }
+
     res.json({ success: true });
 });
 

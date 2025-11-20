@@ -179,29 +179,33 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${tenants.map(tenant => `<option value="${tenant.id}">${tenant.displayName}</option>`).join('')}
                         </select>
                     </label>
+                    <br>
                     ` : ''}
                     <label>Email: <input type="email" id="invite-email-input" required></label>
+                    <div style="display: flex; align-items: center; gap: 1em; margin-bottom: 1em;">
+                        <label class="switch">
+                            <input type="checkbox" id="send-welcome-email-checkbox" checked>
+                            <span class="slider round"></span>
+                        </label>
+                        <span>Send welcome email</span>
+                    </div>
                     <button type="submit">Send Invite</button>
                 </form>
                 <p id="invite-message"></p>
             </div>
         `;
 
-        if (isAdmin) {
-            document.getElementById('tenant-filter').addEventListener('change', (e) => {
-                renderUsersList(e.target.value);
-            });
-        }
-
-        const usersList = document.getElementById('users-list');
-
-        document.getElementById('invite-user-form').addEventListener('submit', (e) => {
+        const inviteForm = document.getElementById('invite-user-form');
+        inviteForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('invite-email-input').value;
             const messageEl = document.getElementById('invite-message');
             messageEl.textContent = 'Sending invite...';
 
-            let body = { email };
+            let body = { 
+                email,
+                sendWelcomeEmail: document.getElementById('send-welcome-email-checkbox').checked
+            };
             if (isAdmin) {
                 body.tenantId = document.getElementById('invite-tenant-select').value;
             }
@@ -211,11 +215,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             }).then(() => {
-                document.getElementById('invite-email-input').value = '';
+                inviteForm.reset();
                 messageEl.textContent = 'Invite sent successfully!';
                 renderUsersList(isAdmin ? document.getElementById('tenant-filter').value : '');
             });
         });
+
+        if (isAdmin) {
+            document.getElementById('tenant-filter').addEventListener('change', (e) => {
+                renderUsersList(e.target.value);
+            });
+        }
+
+        const usersList = document.getElementById('users-list');
 
         usersList.addEventListener('click', (e) => {
             const userRow = e.target.closest('.user-admin-row');
