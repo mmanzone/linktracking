@@ -511,6 +511,56 @@ app.post('/api/click', async (req, res) => {
   res.sendStatus(200);
 });
 
+// --- User Routes ---
+app.get('/api/users/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
+    const user = await redis.get(`user:${id}`);
+    res.json(user);
+});
+
+app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) => {
+  const userKeys = await redis.keys('user:*');
+  const users = await Promise.all(userKeys.map(key => redis.get(key)));
+  res.json(users);
+});
+
+app.post('/api/users/invite', authenticate, async (req, res) => {
+    const { email } = req.body;
+    const userId = `user_${Date.now()}`;
+  
+    await redis.set(`user:${email}`, {
+      id: userId,
+      email,
+      tenants: [],
+      role: 'user',
+      disabled: false,
+      lastLogin: null
+    });
+    
+    res.json({ success: true });
+});
+
+app.put('/api/users/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
+    const { email, firstName, lastName, disabled } = req.body;
+
+    const user = await redis.get(`user:${id}`);
+    if (user) {
+      user.email = email;
+      user.firstName = firstName;
+      user.lastName = lastName;
+      user.disabled = disabled;
+      await redis.set(`user:${id}`, user);
+    }
+    res.json({ success: true });
+});
+
+app.delete('/api/users/:id', authenticate, requireMasterAdmin, async (req, res) => {
+    const { id } = req.params;
+    await redis.del(`user:${id}`);
+    res.json({ success: true });
+});
+
 app.listen(3000, () => {
   console.log('Server is running on port 3000');
 });
