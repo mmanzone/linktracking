@@ -211,6 +211,10 @@ input, textarea {
     justify-content: flex-start;
 }
 
+.user-col-actions button {
+    white-space: nowrap;
+}
+
 .social-link-row {
     display: flex;
     gap: 10px;
@@ -243,7 +247,6 @@ input, textarea {
 .header-logo {
     height: 128px;
 }
-#/* Admin-specific overrides: scope to admin pages only so landing pages aren't affected */
 .admin-page .main-container {
     width: 90% !important;
     max-width: 1400px !important;

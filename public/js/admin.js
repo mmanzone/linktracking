@@ -227,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="user-col-login"></div>
                             <div class="user-col-actions">
                                 <button class="save-user" data-id="${user.id}">Save</button>
+                                <button class="delete-user" data-id="${user.id}">Delete</button>
                                 <button class="cancel-edit">Cancel</button>
                             </div>
                         `;
@@ -368,9 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <input type="checkbox" class="disable-user-toggle" ${!user.disabled ? 'checked' : ''} ${isCurrentUser ? 'disabled' : ''}>
                                         <span class="slider round"></span>
                                     </label>
-                                    <button class="send-magic-link">Send</button>
+                                    <button class="send-magic-link">Send Magic Link</button>
                                     <button class="edit-user">Edit</button>
-                                    ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                                 </div>
                             `;
                             usersList.appendChild(userEl);
