@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
-    const tenant = path.split('/')[1];
+    // Normalize the tenant path segment to uppercase so lookups are case-insensitive
+    const tenant = (path.split('/')[1] || '').toUpperCase();
 
     if (!tenant) {
         document.body.innerHTML = '<h1>Tenant not found</h1>';

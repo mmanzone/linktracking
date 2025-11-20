@@ -1,5 +1,5 @@
 {
-    "tenant_1": {
+    "TENANT_1": {
         "companyName": "Your Company",
         "logo": "images/logo.png",
         "description": "Welcome to our page!",
