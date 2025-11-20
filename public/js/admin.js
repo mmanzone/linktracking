@@ -78,13 +78,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const usersTab = document.createElement('button');
                 usersTab.classList.add('tab-link');
                 usersTab.dataset.tab = 'users';
-                usersTab.textContent = 'Users';
+                usersTab.textContent = 'Users Management';
                 tabsContainer.appendChild(usersTab);
             } else {
                 const usersTab = document.createElement('button');
                 usersTab.classList.add('tab-link');
                 usersTab.dataset.tab = 'users';
-                usersTab.textContent = 'Users';
+                usersTab.textContent = 'Users Management';
                 tabsContainer.appendChild(usersTab);
             }
             
@@ -251,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <input type="checkbox" class="disable-user-toggle" ${!user.disabled ? 'checked' : ''} ${isCurrentUser ? 'disabled' : ''}>
                                         <span class="slider round"></span>
                                     </label>
+                                    <button class="send-magic-link">Send Magic Link</button>
                                     <button class="edit-user">Edit</button>
                                     ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                                 </div>
@@ -276,6 +277,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         };
         
+        usersList.addEventListener('click', (e) => {
+            const userRow = e.target.closest('.user-admin-row');
+            if (!userRow) return;
+            const userId = userRow.dataset.userId;
+
+            if (e.target.classList.contains('send-magic-link')) {
+                fetch(`/api/users/${userId}/send-magic-link`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showNotification('Magic link sent successfully!', 'success');
+                        } else {
+                            showNotification('Failed to send magic link.', 'error');
+                        }
+                    });
+            }
+
+            if (e.target.classList.contains('delete-user')) {
+                if (confirm('Are you sure you want to delete this user?')) {
+                    fetch(`/api/users/${userId}`, { method: 'DELETE' })
+                        .then(() => loadAdminContent('users'));
+                }
+            }
+        });
+
         if (isAdmin) {
             fetch('/api/tenants')
                 .then(res => res.json())
@@ -288,6 +314,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.classList.add('notification', `notification-${type}`);
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
     function renderTenantsTab() {
         adminContentDiv.innerHTML = `
             <div id="tenants-tab" class="tab-content active">

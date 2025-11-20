@@ -680,6 +680,62 @@ app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) =
     res.json(users);
 });
 
+app.post('/api/users/:id/send-magic-link', authenticate, async (req, res) => {
+    const { id } = req.params;
+
+    const userKeys = await redis.keys('user:*');
+    let user = null;
+    for (const key of userKeys) {
+        const u = await redis.get(key);
+        if (u.id === id) {
+            user = u;
+            break;
+        }
+    }
+
+    if (user) {
+        const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '15m' });
+        const host = req.headers.host;
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
+
+        try {
+            await resend.emails.send({
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                to: user.email,
+                subject: 'Your Login Link for linkreach.xyz',
+                html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
+    </div>
+  <h2>Log in to your account</h2>
+  <p>Hello,</p>
+  <p>An administrator requested a link to log in to your account. Click the button below to sign in.</p>
+  <p style="margin: 20px 0;">
+    <a href="${magicLink}" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
+  </p>
+  <p>This link will expire in 15 minutes. If you did not request this email, you can safely ignore it.</p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
+  <hr style="border: none; border-top: 1px solid #eee;">
+  <p style="font-size: 0.8em; color: #939598;">
+    If you're having trouble with the button above, copy and paste the URL below into your web browser:<br>
+    <a href="${magicLink}" style="color: #52b8da;">${magicLink}</a>
+  </p>
+</div>
+`,
+            });
+            res.json({ success: true });
+        } catch (error) {
+            console.error('Error sending magic link:', error);
+            res.status(500).json({ success: false, message: 'Error sending email.' });
+        }
+    } else {
+        res.status(404).json({ success: false, message: 'User not found.' });
+    }
+});
+
 // Temporary debug route: fetch a user by email from Redis.
 // WARNING: Disabled by default. Enable only for short-term debugging by
 // setting environment variable `ENABLE_DEBUG_ROUTES=true` in your deployment.
