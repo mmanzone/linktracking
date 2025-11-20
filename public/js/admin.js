@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        fetch('/api/admin/config')
+        fetch('/api/config')
             .then(response => response.json())
             .then(config => {
                 adminContentDiv.innerHTML = '';
@@ -1030,13 +1030,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const fetchAndDisplayCampaigns = () => {
-            fetch('/api/admin/config').then(res => res.json()).then(config => {
+            fetch('/api/config').then(res => res.json()).then(config => {
                 displayCampaigns(config.campaigns, config);
             });
         };
         
         document.getElementById('add-campaign').addEventListener('click', (e) => {
-            fetch('/api/admin/config').then(res => res.json()).then(config => {
+            fetch('/api/config').then(res => res.json()).then(config => {
                 const newConfig = { ...config };
                 const startDate = new Date();
                 startDate.setHours(0, 0, 0, 0);
@@ -1063,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const campaignId = event.target.closest('.campaign-admin')?.dataset.id;
             if (!campaignId) return;
 
-            fetch('/api/admin/config').then(res => res.json()).then(config => {
+            fetch('/api/config').then(res => res.json()).then(config => {
                 let newConfig = { ...config };
                 const campaign = newConfig.campaigns.find(c => c.id === campaignId);
 
@@ -1185,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (event.target.classList.contains('delete-campaign')) {
                     if (confirm('Are you sure you want to delete this campaign?')) {
-                        fetch('/api/admin/config').then(res => res.json()).then(config => {
+                        fetch('/api/config').then(res => res.json()).then(config => {
                             let newConfig = { ...config };
                             newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
                             saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));

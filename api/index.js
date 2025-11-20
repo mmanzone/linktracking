@@ -402,41 +402,67 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/api/config', authenticate, async (req, res) => {
+app.post('/api/upload', authenticate, async (req, res) => {
     const { tenantId } = req;
-    const newConfig = req.body;
-    await redis.set(`config:${tenantId}`, newConfig);
-    res.sendStatus(200);
+    const { filename, content } = req.body;
+    const blob = await put(`${tenantId}/${filename}`, Buffer.from(content, 'base64'), {
+        access: 'public',
+    });
+    res.json({ url: blob.url });
 });
 
-app.get('/api/analytics', authenticate, async (req, res) => {
-  const { tenantId } = req;
+app.get('/api/config', async (req, res) => {
+    const { tenant } = req.query;
+
+    // This is a workaround for the fact that authenticate is not run on this route
+    const token = req.cookies.session_token;
+    let user = null;
+    let tenantId = null;
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            user = await redis.get(`user:${decoded.email}`);
+            if (user) {
+                tenantId = user.tenants[0];
+            }
+        } catch (e) {
+            // Ignore invalid tokens
+        }
+    }
+
+    if (!tenant) {
+        if (user && tenantId) {
+            const config = await redis.get(`config:${tenantId}`);
+            return res.json(config);
+        }
+        return res.status(400).json({ error: 'Tenant query parameter is required.' });
+    }
+
+    const tenantNormalized = String(tenant || '').toUpperCase();
+    const tenantData = await redis.get(`tenant:${tenantNormalized}`);
+    if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+    
+    const config = await redis.get(`config:${tenantData.id}`);
+    if (!config) return res.status(404).json({ error: 'Configuration not found for tenant.' });
+
+    res.json(config);
+});
+
+app.post('/api/visit', async (req, res) => {
+  const { tenantId } = req.body;
   if (!tenantId) {
     return res.status(400).json({ error: 'Tenant ID is required.' });
   }
 
   try {
-    const analytics = await redis.get(`analytics:${tenantId}`);
-    if (!analytics) {
-      return res.status(404).json({ error: 'Analytics not found for this tenant.' });
-    }
-    res.json(analytics);
+    const visits = await redis.get(`analytics:${tenantId}:visits`);
+    const clicks = await redis.get(`analytics:${tenantId}:clicks`);
+
+    res.json({ visits: visits || [], clicks: clicks || [] });
   } catch (error) {
-    console.error('Error fetching analytics:', error);
+    console.error('Error fetching analytics data:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
-
-app.get('/api/admin/all-configs', authenticate, requireMasterAdmin, async (req, res) => {
-    const tenantKeys = await redis.keys('tenant:*');
-    const allConfigs = {};
-    for (const key of tenantKeys) {
-        const tenant = await redis.get(key);
-        if (tenant && tenant.id) {
-            allConfigs[tenant.id] = await redis.get(`config:${tenant.id}`);
-        }
-    }
-    res.json(allConfigs);
 });
 
 // --- User Routes ---
