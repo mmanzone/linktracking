@@ -78,13 +78,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const usersTab = document.createElement('button');
                 usersTab.classList.add('tab-link');
                 usersTab.dataset.tab = 'users';
-                usersTab.textContent = 'Users Management';
+                usersTab.textContent = 'Users';
                 tabsContainer.appendChild(usersTab);
             } else {
                 const usersTab = document.createElement('button');
                 usersTab.classList.add('tab-link');
                 usersTab.dataset.tab = 'users';
-                usersTab.textContent = 'Users Management';
+                usersTab.textContent = 'Users';
                 tabsContainer.appendChild(usersTab);
             }
             
@@ -140,10 +140,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderUsersTab() {
         const isAdmin = currentUser.role === 'master-admin';
         const userApiUrl = isAdmin ? '/api/admin/users' : '/api/users';
-    
+
         let tenants = [];
         let tenantFilter = '';
-    
+
         const setupUsersTab = () => {
             if (isAdmin) {
                 tenantFilter = `
@@ -156,10 +156,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             }
-    
+
             adminContentDiv.innerHTML = `
                 <div id="users-tab" class="tab-content active">
-                    <h2>User Management</h2>
+                    <h2>Users Management</h2>
                     ${tenantFilter}
                     <div id="users-list-container">
                         <div class="user-admin-header">
@@ -181,13 +181,130 @@ document.addEventListener('DOMContentLoaded', () => {
                     ` : ''}
                 </div>
             `;
-    
+
             if (isAdmin) {
                 document.getElementById('tenant-filter').addEventListener('change', (e) => {
                     renderUsersList(e.target.value);
                 });
             }
+
+            const usersList = document.getElementById('users-list');
+
+            usersList.addEventListener('click', (e) => {
+                const userRow = e.target.closest('.user-admin-row');
+                if (!userRow) return;
+                const userId = userRow.dataset.userId;
     
+                if (e.target.classList.contains('send-magic-link')) {
+                    fetch(`/api/users/${userId}/send-magic-link`, { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showNotification('Magic link sent successfully!', 'success');
+                            } else {
+                                showNotification('Failed to send magic link.', 'error');
+                            }
+                        });
+                }
+    
+                if (e.target.classList.contains('delete-user')) {
+                    if (confirm('Are you sure you want to delete this user?')) {
+                        fetch(`/api/users/${userId}`, { method: 'DELETE' })
+                            .then(() => renderUsersList(isAdmin ? document.getElementById('tenant-filter').value : ''));
+                    }
+                }
+
+                if (e.target.classList.contains('edit-user')) {
+                    fetch(userApiUrl).then(res => res.json()).then(users => {
+                        const user = users.find(u => u.id === userId);
+                        userRow.innerHTML = `
+                            <div class="user-col-email"><input type="email" class="edit-email" value="${user.email}"></div>
+                            <div class="user-col-name">
+                                <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
+                                <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
+                            </div>
+                            ${isAdmin ? `<div class="user-col-tenant"></div>` : ''}
+                            <div class="user-col-login"></div>
+                            <div class="user-col-actions">
+                                <button class="save-user" data-id="${user.id}">Save</button>
+                                <button class="cancel-edit">Cancel</button>
+                            </div>
+                        `;
+                    });
+                }
+
+                if (e.target.classList.contains('save-user')) {
+                    const body = {
+                        firstName: userRow.querySelector('.edit-firstName').value,
+                        lastName: userRow.querySelector('.edit-lastName').value,
+                        email: userRow.querySelector('.edit-email').value,
+                    };
+                    fetch(`/api/users/${userId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    }).then(() => {
+                        const button = e.target;
+                        button.classList.add('success');
+                        button.textContent = 'Saved!';
+                        setTimeout(() => {
+                            renderUsersList(isAdmin ? document.getElementById('tenant-filter').value : '');
+                        }, 1000);
+                    });
+                }
+
+                if (e.target.classList.contains('cancel-edit')) {
+                    renderUsersList(isAdmin ? document.getElementById('tenant-filter').value : '');
+                }
+            });
+
+            usersList.addEventListener('change', (e) => {
+                if (e.target.classList.contains('disable-user-toggle')) {
+                    const userRow = e.target.closest('.user-admin-row');
+                    const userId = userRow.dataset.userId;
+                    const isDisabled = !e.target.checked;
+    
+                    fetch(userApiUrl)
+                        .then(res => res.json())
+                        .then(users => {
+                            const user = users.find(u => u.id === userId);
+                            if (user) {
+                                user.disabled = isDisabled;
+                                fetch(`/api/users/${userId}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(user)
+                                }).then(() => {
+                                    if (isDisabled) {
+                                        userRow.classList.add('inactive');
+                                    } else {
+                                        userRow.classList.remove('inactive');
+                                    }
+                                });
+                            }
+                        });
+                }
+            });
+
+            if (!isAdmin) {
+                document.getElementById('invite-user-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('invite-email-input').value;
+                    const messageEl = document.getElementById('invite-message');
+                    messageEl.textContent = 'Sending invite...';
+    
+                    fetch('/api/users/invite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    }).then(() => {
+                        document.getElementById('invite-email-input').value = '';
+                        messageEl.textContent = 'Invite sent successfully!';
+                        renderUsersList();
+                    });
+                });
+            }
+
             renderUsersList();
         };
     
@@ -251,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <input type="checkbox" class="disable-user-toggle" ${!user.disabled ? 'checked' : ''} ${isCurrentUser ? 'disabled' : ''}>
                                         <span class="slider round"></span>
                                     </label>
-                                    <button class="send-magic-link">Send Magic Link</button>
+                                    <button class="send-magic-link">Send</button>
                                     <button class="edit-user">Edit</button>
                                     ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
                                 </div>
@@ -277,31 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         };
         
-        usersList.addEventListener('click', (e) => {
-            const userRow = e.target.closest('.user-admin-row');
-            if (!userRow) return;
-            const userId = userRow.dataset.userId;
-
-            if (e.target.classList.contains('send-magic-link')) {
-                fetch(`/api/users/${userId}/send-magic-link`, { method: 'POST' })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            showNotification('Magic link sent successfully!', 'success');
-                        } else {
-                            showNotification('Failed to send magic link.', 'error');
-                        }
-                    });
-            }
-
-            if (e.target.classList.contains('delete-user')) {
-                if (confirm('Are you sure you want to delete this user?')) {
-                    fetch(`/api/users/${userId}`, { method: 'DELETE' })
-                        .then(() => loadAdminContent('users'));
-                }
-            }
-        });
-
         if (isAdmin) {
             fetch('/api/tenants')
                 .then(res => res.json())
@@ -313,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setupUsersTab();
         }
     }
-    
+
     function showNotification(message, type = 'info') {
         const notification = document.createElement('div');
         notification.classList.add('notification', `notification-${type}`);
@@ -323,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
             notification.remove();
         }, 3000);
     }
-
+    
     function renderTenantsTab() {
         adminContentDiv.innerHTML = `
             <div id="tenants-tab" class="tab-content active">
