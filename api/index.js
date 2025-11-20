@@ -20,74 +20,79 @@ console.log('Redis client initialized.');
 const initializeRedisData = async () => {
   try {
     console.log('Running data initialization...');
+    // Wipe all existing tenant-related data and recreate a single MASTER tenant.
+    // This intentionally deletes any existing tenants, configs, analytics and users
+    // so the app will start with a blank slate containing only the MASTER tenant.
+    try {
+      console.log('Wiping existing tenant, config, analytics and user keys...');
 
-    const masterTenantExists = await redis.exists('tenant:MASTER');
-    if (!masterTenantExists) {
-      console.log('Master tenant not found, creating...');
-      await redis.set('tenant:MASTER', {
-        id: 'TENANT_1',
-        name: 'MASTER',
-        displayName: 'Master Admin',
-        users: ['user_1'],
-      });
-      console.log('Master tenant created.');
-    } else {
-      console.log('Master tenant already exists.');
-    }
+      const tenantKeys = await redis.keys('tenant:*');
+      for (const k of tenantKeys) {
+        await redis.del(k);
+      }
 
-    const masterUserExists = await redis.exists('user:matthias@manzone.org');
-    if (!masterUserExists) {
-      console.log('Master user not found, creating...');
-      await redis.set('user:matthias@manzone.org', {
-        id: 'user_1',
-        email: 'matthias@manzone.org',
-        firstName: 'Matthias',
-        lastName: 'Manzone',
-        tenants: ['TENANT_1'],
-        role: 'master-admin',
-        disabled: false,
-        lastLogin: null
-      });
-      console.log('Master user created.');
-    } else {
-      console.log('Master user already exists.');
-    }
-    
-    const masterConfigExists = await redis.exists('config:TENANT_1');
-    if(!masterConfigExists) {
-      console.log('Master config not found, creating...');
-      await redis.set('config:TENANT_1', {
-        companyName: 'Your Company',
-        logo: '/images/logo.png',
-        description: 'Welcome to our page!',
-        theme: { 
-          primaryColor: '#007bff', 
-          secondaryColor: '#6c757d',
-          primaryTextColor: '#ffffff',
-          secondaryTextColor: '#ffffff',
-          backgroundColor: '#f0f2f5',
-          containerColor: '#ffffff'
-        },
-        socialLinks: [],
-        links: [],
-        campaigns: [],
-      });
-      console.log('Master config created.');
-    } else {
-      console.log('Master config already exists.');
+      const configKeys = await redis.keys('config:*');
+      for (const k of configKeys) {
+        await redis.del(k);
+      }
+
+      const analyticsKeys = await redis.keys('analytics:*');
+      for (const k of analyticsKeys) {
+        await redis.del(k);
+      }
+
+      const userKeys = await redis.keys('user:*');
+      for (const k of userKeys) {
+        await redis.del(k);
+      }
+
+      console.log('All tenant-related keys removed.');
+    } catch (err) {
+      console.error('Error while wiping keys during initialization:', err);
     }
 
-    const masterAnalyticsExists = await redis.exists('analytics:TENANT_1');
-    if (!masterAnalyticsExists) {
-      console.log('Master analytics not found, creating...');
-      await redis.set('analytics:TENANT_1', {
-        visits: [],
-        clicks: [],
-      });
-      console.log('Master analytics created.');
-    } else {
-      console.log('Master analytics already exists.');
-    }
+    // Recreate a single MASTER tenant and master user (uppercase names/ids)
+    console.log('Creating MASTER tenant and master user...');
+    await redis.set('tenant:MASTER', {
+      id: 'TENANT_1',
+      name: 'MASTER',
+      displayName: 'Master Admin',
+      users: ['user_1'],
+    });
+
+    await redis.set('user:matthias@manzone.org', {
+      id: 'user_1',
+      email: 'matthias@manzone.org',
+      firstName: 'Matthias',
+      lastName: 'Manzone',
+      tenants: ['TENANT_1'],
+      role: 'master-admin',
+      disabled: false,
+      lastLogin: null
+    });
+
+    await redis.set('config:TENANT_1', {
+      companyName: 'Your Company',
+      logo: '/images/logo.png',
+      description: 'Welcome to our page!',
+      theme: { 
+        primaryColor: '#007bff', 
+        secondaryColor: '#6c757d',
+        primaryTextColor: '#ffffff',
+        secondaryTextColor: '#ffffff',
+        backgroundColor: '#f0f2f5',
+        containerColor: '#ffffff'
+      },
+      socialLinks: [],
+      links: [],
+      campaigns: [],
+    });
+
+    await redis.set('analytics:TENANT_1', {
+      visits: [],
+      clicks: [],
+    });
+    console.log('MASTER tenant and related data created.');
     console.log('Data initialization complete.');
   } catch (error) {
     console.error('CRITICAL ERROR during data initialization:', error);
