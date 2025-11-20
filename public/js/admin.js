@@ -1014,6 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const campaignElement = document.createElement('div');
                     campaignElement.classList.add('campaign-admin');
                     campaignElement.dataset.id = campaign.id;
+                    campaignElement.dataset.tenantId = campaign.tenantId; // Store tenantId
 
                     let campaignName = campaign.name;
                     if (currentUser.role === 'master-admin' && allTenants.length > 0) {
@@ -1082,22 +1083,83 @@ document.addEventListener('DOMContentLoaded', () => {
         campaignDateFilter.addEventListener('change', fetchAndDisplayCampaigns);
 
         campaignsList.addEventListener('click', (event) => {
-            const campaignId = event.target.closest('.campaign-admin')?.dataset.id;
-            if (!campaignId) return;
+            const campaignElement = event.target.closest('.campaign-admin');
+            if (!campaignElement) return;
+
+            const campaignId = campaignElement.dataset.id;
+            const tenantId = campaignElement.dataset.tenantId;
 
             if (event.target.classList.contains('view-campaign-stats')) {
-                document.querySelector('.tab-link[data-tab="analytics"]').click();
+                const existingStats = campaignElement.querySelector('.campaign-stats-details');
+                if (existingStats) {
+                    existingStats.remove();
+                    return;
+                }
 
-                // We need to wait for the analytics tab to be rendered
-                setTimeout(() => {
-                    const campaignFilter = document.getElementById('campaign-filter');
-                    if (campaignFilter) {
-                        campaignFilter.value = campaignId;
-                        // Dispatch a 'change' event to trigger the filtering
-                        const event = new Event('change', { bubbles: true });
-                        campaignFilter.dispatchEvent(event);
-                    }
-                }, 100); // A small delay to ensure the element is available
+                // Find the campaign data
+                const campaignData = config.campaigns.find(c => c.id === campaignId);
+                
+                let analyticsUrl = `/api/analytics`;
+                if(currentUser.role === 'master-admin') {
+                    analyticsUrl = `/api/admin/analytics?tenantId=${tenantId}`
+                }
+
+                fetch(analyticsUrl)
+                    .then(res => res.json())
+                    .then(analytics => {
+                        const campaignStart = new Date(campaignData.startDate);
+                        const campaignEnd = new Date(campaignData.endDate);
+
+                        const campaignVisits = analytics.visits.filter(v => {
+                            const visitDate = new Date(v.timestamp);
+                            return visitDate >= campaignStart && visitDate <= campaignEnd;
+                        });
+                        const campaignClicks = analytics.clicks.filter(c => {
+                            const clickDate = new Date(c.timestamp);
+                            return clickDate >= campaignStart && clickDate <= campaignEnd;
+                        });
+
+                        const totalVisits = campaignVisits.length;
+                        const totalClicks = campaignClicks.length;
+                        const visitorsWhoClicked = new Set(campaignClicks.map(c => c.ip));
+                        const abandonedVisits = totalVisits - visitorsWhoClicked.size;
+                        const clickPercentage = totalVisits > 0 ? ((visitorsWhoClicked.size / totalVisits) * 100).toFixed(1) : 0;
+
+                        const statsContainer = document.createElement('div');
+                        statsContainer.classList.add('campaign-stats-details');
+                        statsContainer.innerHTML = `
+                            <p><strong>Total Visits:</strong> ${totalVisits}</p>
+                            <p><strong>Total Links Clicked:</strong> ${totalClicks} (${clickPercentage}%)</p>
+                            <p><strong>Abandoned Visits:</strong> ${abandonedVisits}</p>
+                            <div class="chart-container" style="height: 150px; margin-top: 10px;">
+                                <canvas id="chart-${campaignId}"></canvas>
+                            </div>
+                        `;
+                        campaignElement.appendChild(statsContainer);
+
+                        const ctx = document.getElementById(`chart-${campaignId}`).getContext('2d');
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Visitor Engagement'],
+                                datasets: [{
+                                    label: 'Followed Link',
+                                    data: [visitorsWhoClicked.size],
+                                    backgroundColor: '#28a745'
+                                }, {
+                                    label: 'Abandoned',
+                                    data: [abandonedVisits],
+                                    backgroundColor: '#dc3545'
+                                }]
+                            },
+                            options: {
+                                indexAxis: 'y',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: { x: { stacked: true }, y: { stacked: true } }
+                            }
+                        });
+                    });
             }
 
             fetch('/api/config').then(res => res.json()).then(config => {
