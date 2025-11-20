@@ -411,6 +411,11 @@ app.post('/api/upload', authenticate, async (req, res) => {
     res.json({ url: blob.url });
 });
 
+app.get('/api/admin/config', authenticate, async (req, res) => {
+    const config = await redis.get(`config:${req.tenantId}`);
+    res.json(config);
+});
+
 app.get('/api/config', async (req, res) => {
     const { tenant } = req.query;
 
@@ -448,15 +453,40 @@ app.get('/api/config', async (req, res) => {
     res.json(config);
 });
 
+app.post('/api/config', authenticate, async (req, res) => {
+  const { tenantId } = req;
+  const newConfig = req.body;
+  await redis.set(`config:${tenantId}`, newConfig);
+  res.sendStatus(200);
+});
+
 app.post('/api/visit', async (req, res) => {
-  const { tenantId } = req.body;
-  if (!tenantId) {
+  const { tenant } = req.query;
+  const { path, referrer } = req.body;
+
+  if (!tenant) {
     return res.status(400).json({ error: 'Tenant ID is required.' });
   }
 
   try {
-    const visits = await redis.get(`analytics:${tenantId}:visits`);
-    const clicks = await redis.get(`analytics:${tenantId}:clicks`);
+    const visits = await redis.get(`analytics:${tenant}:visits`);
+    const clicks = await redis.get(`analytics:${tenant}:clicks`);
+
+    // Log the incoming visit data
+    console.log('Incoming visit data:', { path, referrer });
+
+    // Update visits
+    if (path) {
+      visits.push({ path, timestamp: new Date().toISOString() });
+    }
+
+    // Update clicks (assuming referrer is the clicked link)
+    if (referrer) {
+      clicks.push({ referrer, timestamp: new Date().toISOString() });
+    }
+
+    await redis.set(`analytics:${tenant}:visits`, visits);
+    await redis.set(`analytics:${tenant}:clicks`, clicks);
 
     res.json({ visits: visits || [], clicks: clicks || [] });
   } catch (error) {
