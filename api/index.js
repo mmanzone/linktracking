@@ -373,11 +373,10 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     if (sendWelcomeEmail) {
         try {
             const baseUrl = getBaseUrl(req);
-        // Use the normalized name in the welcome URL
-        await resend.emails.send({
+            await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
-                subject: `Welcome to linkreach.xyz, ${displayName}!`,
+                subject: `Welcome to linkreach.xyz, ${tenantToInviteTo.displayName}!`,
                 html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
     <div style="margin-bottom: 20px;">
@@ -386,8 +385,8 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     </div>
   <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
-  <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
-  <p>Your public landing page is available at: <a href="${baseUrl}/${normalizedName}">${baseUrl}/${normalizedName}</a></p>
+  <p>An account has been created for you on linkreach.xyz for the workspace "${tenantToInviteTo.displayName}". You can now log in at any time to manage your links and track their performance.</p>
+  <p>Your public landing page is available at: <a href="${baseUrl}/${tenantToInviteTo.name}">${baseUrl}/${tenantToInviteTo.name}</a></p>
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
@@ -397,118 +396,47 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
             });
         } catch (error) {
             console.error('Error sending welcome email:', error);
-            // We don't want to fail the whole request if the email fails
         }
     }
-    
+
     res.json({ success: true });
 });
 
-app.put('/api/tenants/:id', authenticate, requireMasterAdmin, async (req, res) => {
-    const { id } = req.params;
-    const { displayName } = req.body;
-  const idNormalized = String(id || '').toUpperCase();
-  const tenant = await redis.get(`tenant:${idNormalized}`);
-  if (tenant) {
-    tenant.displayName = displayName;
-    await redis.set(`tenant:${idNormalized}`, tenant);
-  }
-    res.json({ success: true });
-});
-
-app.delete('/api/tenants/:id', authenticate, requireMasterAdmin, async (req, res) => {
-    const { id } = req.params;
-  const idNormalized = String(id || '').toUpperCase();
-  const tenant = await redis.get(`tenant:${idNormalized}`);
-  if (tenant) {
-    // This is a simplified deletion. In a real app, you'd need to handle
-    // all associated data (users, configs, analytics, blobs, etc.).
-    await redis.del(`tenant:${idNormalized}`);
-    // You'd also need to remove the tenant from the users' tenant lists.
-  }
-    res.json({ success: true });
-});
-
-app.get('/api/auth/verify', (req, res) => {
-  const { token } = req.query;
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const sessionToken = jwt.sign({ email: decoded.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('session_token', sessionToken, { httpOnly: true, secure: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
-    res.redirect('/admin.html');
-  } catch (error) {
-    res.status(401).send('Invalid or expired token.');
-  }
-});
-
-
-app.post('/api/upload', authenticate, async (req, res) => {
+app.post('/api/config', authenticate, async (req, res) => {
     const { tenantId } = req;
-    const { filename, content } = req.body;
-    const blob = await put(`${tenantId}/${filename}`, Buffer.from(content, 'base64'), {
-        access: 'public',
-    });
-    res.json({ url: blob.url });
+    const newConfig = req.body;
+    await redis.set(`config:${tenantId}`, newConfig);
+    res.sendStatus(200);
 });
 
-app.get('/api/admin/config', authenticate, async (req, res) => {
-    const config = await redis.get(`config:${req.tenantId}`);
-    res.json(config);
+app.get('/api/analytics', authenticate, async (req, res) => {
+  const { tenantId } = req;
+  if (!tenantId) {
+    return res.status(400).json({ error: 'Tenant ID is required.' });
+  }
+
+  try {
+    const analytics = await redis.get(`analytics:${tenantId}`);
+    if (!analytics) {
+      return res.status(404).json({ error: 'Analytics not found for this tenant.' });
+    }
+    res.json(analytics);
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.get('/api/config', async (req, res) => {
-  const { tenant } = req.query;
-  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
-
-  const tenantNormalized = String(tenant || '').toUpperCase();
-  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
-  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
-  
-  const config = await redis.get(`config:${tenantData.id}`);
-  if (!config) return res.status(404).json({ error: 'Configuration not found for tenant.' });
-
-  res.json(config);
-});
-
-app.post('/api/visit', async (req, res) => {
-  const { tenant } = req.query;
-  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
-  const tenantNormalized = String(tenant || '').toUpperCase();
-  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
-  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
-
-  const analytics = await redis.get(`analytics:${tenantData.id}`);
-  if (!analytics) return res.sendStatus(200);
-
-  analytics.visits.push({
-    timestamp: new Date().toISOString(),
-    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-    userAgent: req.headers['user-agent'],
-  });
-  await redis.set(`analytics:${tenantData.id}`, analytics);
-  res.sendStatus(200);
-});
-
-app.post('/api/click', async (req, res) => {
-  const { tenant } = req.query;
-  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
-  
-  const tenantNormalized = String(tenant || '').toUpperCase();
-  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
-  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
-
-  const { linkId } = req.body;
-  const analytics = await redis.get(`analytics:${tenantData.id}`);
-  if (!analytics) return res.sendStatus(200);
-
-  analytics.clicks.push({
-    timestamp: new Date().toISOString(),
-    linkId,
-    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-    userAgent: req.headers['user-agent'],
-  });
-  await redis.set(`analytics:${tenantData.id}`, analytics);
-  res.sendStatus(200);
+app.get('/api/admin/all-configs', authenticate, requireMasterAdmin, async (req, res) => {
+    const tenantKeys = await redis.keys('tenant:*');
+    const allConfigs = {};
+    for (const key of tenantKeys) {
+        const tenant = await redis.get(key);
+        if (tenant && tenant.id) {
+            allConfigs[tenant.id] = await redis.get(`config:${tenant.id}`);
+        }
+    }
+    res.json(allConfigs);
 });
 
 // --- User Routes ---
@@ -583,34 +511,30 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
     if (sendWelcomeEmail) {
         try {
             const baseUrl = getBaseUrl(req);
-        // Use the normalized name in the welcome URL
-        await resend.emails.send({
+            await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
-                subject: `Welcome to linkreach.xyz, ${displayName}!`,
+                subject: `You've been invited to ${tenantToInviteTo.displayName} on linkreach.xyz`,
                 html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
     <div style="margin-bottom: 20px;">
         <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
         <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
     </div>
-  <h2>Your linkreach.xyz account is ready!</h2>
-  <p>Hello,</p>
-  <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
-  <p>Your public landing page is available at: <a href="${baseUrl}/${normalizedName}">${baseUrl}/${normalizedName}</a></p>
+  <h2>You've been invited!</h2>
+  <p>You have been invited to join the "${tenantToInviteTo.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
   <p style="margin: 20px 0;">
-    <a href="${baseUrl}/login" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
+    <a href="${baseUrl}/login?invited=true" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Activate Your Account</a>
   </p>
   <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
 </div>
 `,
             });
         } catch (error) {
-            console.error('Error sending welcome email:', error);
-            // We don't want to fail the whole request if the email fails
+            console.error('Error sending invite email:', error);
         }
     }
-    
+
     res.json({ success: true });
 });
 
@@ -629,17 +553,16 @@ app.post('/api/users/:id/send-magic-link', authenticate, async (req, res) => {
 
     if (user) {
         const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '15m' });
-        // Dynamically generate the magic link URL
         const host = req.headers.host;
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
 
         try {
-          await resend.emails.send({
-            from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
-            to: user.email,
-            subject: 'Your Login Link for linkreach.xyz',
-            html: `
+            await resend.emails.send({
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                to: user.email,
+                subject: 'Your Login Link for linkreach.xyz',
+                html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
     <div style="margin-bottom: 20px;">
         <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
@@ -647,7 +570,7 @@ app.post('/api/users/:id/send-magic-link', authenticate, async (req, res) => {
     </div>
   <h2>Log in to your account</h2>
   <p>Hello,</p>
-  <p>You requested a link to log in to your account. Click the button below to sign in.</p>
+  <p>An administrator requested a link to log in to your account. Click the button below to sign in.</p>
   <p style="margin: 20px 0;">
     <a href="${magicLink}" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
   </p>
@@ -661,10 +584,9 @@ app.post('/api/users/:id/send-magic-link', authenticate, async (req, res) => {
 </div>
 `,
           });
-          console.log(`Magic link sent to: ${user.email}`);
-          res.json({ success: true, message: 'Magic link sent.' });
+          res.json({ success: true });
         } catch (error) {
-          console.error('Error sending email:', error); // Log the actual error
+          console.error('Error sending magic link:', error);
           res.status(500).json({ success: false, message: 'Error sending email.' });
         }
     } else {
@@ -733,61 +655,6 @@ app.delete('/api/users/:id', authenticate, async (req, res) => {
         }
     }
     res.json({ success: true });
-});
-
-app.post('/api/config', authenticate, async (req, res) => {
-  const { tenant } = req.query;
-  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
-
-  const tenantNormalized = String(tenant || '').toUpperCase();
-  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
-  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
-  
-  const config = await redis.get(`config:${tenantData.id}`);
-  if (!config) return res.status(404).json({ error: 'Configuration not found for tenant.' });
-
-  res.json(config);
-});
-
-app.post('/api/visit', async (req, res) => {
-  const { tenant } = req.query;
-  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
-  const tenantNormalized = String(tenant || '').toUpperCase();
-  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
-  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
-
-  const analytics = await redis.get(`analytics:${tenantData.id}`);
-  if (!analytics) return res.sendStatus(200);
-
-  analytics.visits.push({
-    timestamp: new Date().toISOString(),
-    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-    userAgent: req.headers['user-agent'],
-  });
-  await redis.set(`analytics:${tenantData.id}`, analytics);
-  res.sendStatus(200);
-});
-
-app.post('/api/click', async (req, res) => {
-  const { tenant } = req.query;
-  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
-  
-  const tenantNormalized = String(tenant || '').toUpperCase();
-  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
-  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
-
-  const { linkId } = req.body;
-  const analytics = await redis.get(`analytics:${tenantData.id}`);
-  if (!analytics) return res.sendStatus(200);
-
-  analytics.clicks.push({
-    timestamp: new Date().toISOString(),
-    linkId,
-    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-    userAgent: req.headers['user-agent'],
-  });
-  await redis.set(`analytics:${tenantData.id}`, analytics);
-  res.sendStatus(200);
 });
 
 app.listen(3000, () => {
