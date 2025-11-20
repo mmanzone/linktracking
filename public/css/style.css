@@ -19,7 +19,7 @@ body {
     background-color: var(--primary-background);
     color: #1c1e21;
     margin: 0;
-    display: flex;
+    /*display: flex;*/
     justify-content: center;
     min-height: 100vh;
 }
