@@ -20,43 +20,58 @@ console.log('Redis client initialized.');
 const initializeRedisData = async () => {
   try {
     console.log('Running data initialization...');
+    // If RESET_TENANTS is true, perform destructive wipe and recreate MASTER tenant.
+    // Otherwise, be non-destructive: ensure MASTER tenant and related keys exist.
+    if (process.env.RESET_TENANTS === 'true') {
+      try {
+        console.log('RESET_TENANTS=true — wiping existing tenant, config, analytics and user keys...');
 
-    const masterTenantExists = await redis.exists('tenant:master');
-    if (!masterTenantExists) {
-      console.log('Master tenant not found, creating...');
-      await redis.set('tenant:master', {
-        id: 'tenant_1',
-        name: 'master',
+        const tenantKeys = await redis.keys('tenant:*');
+        for (const k of tenantKeys) {
+          await redis.del(k);
+        }
+
+        const configKeys = await redis.keys('config:*');
+        for (const k of configKeys) {
+          await redis.del(k);
+        }
+
+        const analyticsKeys = await redis.keys('analytics:*');
+        for (const k of analyticsKeys) {
+          await redis.del(k);
+        }
+
+        const userKeys = await redis.keys('user:*');
+        for (const k of userKeys) {
+          await redis.del(k);
+        }
+
+        console.log('All tenant-related keys removed.');
+      } catch (err) {
+        console.error('Error while wiping keys during initialization:', err);
+      }
+
+      // Recreate a single MASTER tenant and master user (uppercase names/ids)
+      console.log('Creating MASTER tenant and master user (destructive mode)...');
+      await redis.set('tenant:MASTER', {
+        id: 'TENANT_1',
+        name: 'MASTER',
         displayName: 'Master Admin',
         users: ['user_1'],
       });
-      console.log('Master tenant created.');
-    } else {
-      console.log('Master tenant already exists.');
-    }
 
-    const masterUserExists = await redis.exists('user:matthias@manzone.org');
-    if (!masterUserExists) {
-      console.log('Master user not found, creating...');
       await redis.set('user:matthias@manzone.org', {
         id: 'user_1',
         email: 'matthias@manzone.org',
         firstName: 'Matthias',
         lastName: 'Manzone',
-        tenants: ['tenant_1'],
+        tenants: ['TENANT_1'],
         role: 'master-admin',
         disabled: false,
         lastLogin: null
       });
-      console.log('Master user created.');
-    } else {
-      console.log('Master user already exists.');
-    }
-    
-    const masterConfigExists = await redis.exists('config:tenant_1');
-    if(!masterConfigExists) {
-      console.log('Master config not found, creating...');
-      await redis.set('config:tenant_1', {
+
+      await redis.set('config:TENANT_1', {
         companyName: 'Your Company',
         logo: '/images/logo.png',
         description: 'Welcome to our page!',
@@ -72,21 +87,78 @@ const initializeRedisData = async () => {
         links: [],
         campaigns: [],
       });
-      console.log('Master config created.');
-    } else {
-      console.log('Master config already exists.');
-    }
 
-    const masterAnalyticsExists = await redis.exists('analytics:tenant_1');
-    if (!masterAnalyticsExists) {
-      console.log('Master analytics not found, creating...');
-      await redis.set('analytics:tenant_1', {
+      await redis.set('analytics:TENANT_1', {
         visits: [],
         clicks: [],
       });
-      console.log('Master analytics created.');
+      console.log('MASTER tenant and related data created.');
     } else {
-      console.log('Master analytics already exists.');
+      // Non-destructive path: ensure MASTER tenant and related keys exist
+      console.log('RESET_TENANTS not set — ensuring MASTER tenant exists (non-destructive).');
+      try {
+        const masterExists = await redis.exists('tenant:MASTER');
+        if (!masterExists) {
+          console.log('Master tenant not found, creating...');
+          await redis.set('tenant:MASTER', {
+            id: 'TENANT_1',
+            name: 'MASTER',
+            displayName: 'Master Admin',
+            users: ['user_1'],
+          });
+          console.log('Master tenant created.');
+        }
+
+        const masterUserExists = await redis.exists('user:matthias@manzone.org');
+        if (!masterUserExists) {
+          console.log('Master user not found, creating...');
+          await redis.set('user:matthias@manzone.org', {
+            id: 'user_1',
+            email: 'matthias@manzone.org',
+            firstName: 'Matthias',
+            lastName: 'Manzone',
+            tenants: ['TENANT_1'],
+            role: 'master-admin',
+            disabled: false,
+            lastLogin: null
+          });
+          console.log('Master user created.');
+        }
+
+        const masterConfigExists = await redis.exists('config:TENANT_1');
+        if (!masterConfigExists) {
+          console.log('Master config not found, creating...');
+          await redis.set('config:TENANT_1', {
+            companyName: 'Your Company',
+            logo: '/images/logo.png',
+            description: 'Welcome to our page!',
+            theme: { 
+              primaryColor: '#007bff', 
+              secondaryColor: '#6c757d',
+              primaryTextColor: '#ffffff',
+              secondaryTextColor: '#ffffff',
+              backgroundColor: '#f0f2f5',
+              containerColor: '#ffffff'
+            },
+            socialLinks: [],
+            links: [],
+            campaigns: [],
+          });
+          console.log('Master config created.');
+        }
+
+        const masterAnalyticsExists = await redis.exists('analytics:TENANT_1');
+        if (!masterAnalyticsExists) {
+          console.log('Master analytics not found, creating...');
+          await redis.set('analytics:TENANT_1', {
+            visits: [],
+            clicks: [],
+          });
+          console.log('Master analytics created.');
+        }
+      } catch (err) {
+        console.error('Error while ensuring MASTER tenant exists:', err);
+      }
     }
     console.log('Data initialization complete.');
   } catch (error) {
@@ -94,8 +166,10 @@ const initializeRedisData = async () => {
   }
 };
 
-
-initializeRedisData();
+// Start initialization immediately and expose the promise so request handlers
+// can await it to avoid race conditions where requests arrive before the
+// MASTER user/tenant have been created.
+const initializationPromise = initializeRedisData();
 // --- End Data Initialization ---
 
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -114,6 +188,12 @@ const getBaseUrl = (req) => {
 };
 
 const authenticate = async (req, res, next) => {
+  // Ensure initialization has completed so required keys (MASTER user/tenant)
+  // exist before we try to authenticate users.
+  if (typeof initializationPromise !== 'undefined') {
+    try { await initializationPromise; } catch (err) { /* ignore init errors here */ }
+  }
+
   const token = req.cookies.session_token;
 
   if (!token) {
@@ -165,6 +245,11 @@ const requireMasterAdmin = (req, res, next) => {
 app.post('/api/auth/login', async (req, res) => {
   const { email } = req.body;
   console.log(`Login attempt for email: ${email}`);
+  // Wait for initialization to complete to avoid racing with startup
+  if (typeof initializationPromise !== 'undefined') {
+    try { await initializationPromise; } catch (err) { /* ignore */ }
+  }
+
   const user = await redis.get(`user:${email}`);
 
   if (user) {
@@ -239,12 +324,15 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     const tenantId = `tenant_${Date.now()}`;
     const userId = `user_${Date.now()}`;
 
-    await redis.set(`tenant:${name}`, {
-        id: tenantId,
-        name,
-        displayName,
-        users: [userId],
-    });
+  // Normalize the tenant name to upper-case for storage and lookup
+  const normalizedName = String(name || '').toUpperCase();
+
+  await redis.set(`tenant:${normalizedName}`, {
+    id: tenantId,
+    name: normalizedName,
+    displayName,
+    users: [userId],
+  });
 
     await redis.set(`user:${email}`, {
         id: userId,
@@ -279,7 +367,8 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     if (sendWelcomeEmail) {
         try {
             const baseUrl = getBaseUrl(req);
-            await resend.emails.send({
+        // Use the normalized name in the welcome URL
+        await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
                 subject: `Welcome to linkreach.xyz, ${displayName}!`,
@@ -292,7 +381,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
   <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
   <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
-  <p>Your public landing page is available at: <a href="${baseUrl}/${name}">${baseUrl}/${name}</a></p>
+  <p>Your public landing page is available at: <a href="${baseUrl}/${normalizedName}">${baseUrl}/${normalizedName}</a></p>
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
@@ -312,23 +401,25 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
 app.put('/api/tenants/:id', authenticate, requireMasterAdmin, async (req, res) => {
     const { id } = req.params;
     const { displayName } = req.body;
-    const tenant = await redis.get(`tenant:${id}`);
-    if (tenant) {
-        tenant.displayName = displayName;
-        await redis.set(`tenant:${id}`, tenant);
-    }
+  const idNormalized = String(id || '').toUpperCase();
+  const tenant = await redis.get(`tenant:${idNormalized}`);
+  if (tenant) {
+    tenant.displayName = displayName;
+    await redis.set(`tenant:${idNormalized}`, tenant);
+  }
     res.json({ success: true });
 });
 
 app.delete('/api/tenants/:id', authenticate, requireMasterAdmin, async (req, res) => {
     const { id } = req.params;
-    const tenant = await redis.get(`tenant:${id}`);
-    if (tenant) {
-        // This is a simplified deletion. In a real app, you'd need to handle
-        // all associated data (users, configs, analytics, blobs, etc.).
-        await redis.del(`tenant:${id}`);
-        // You'd also need to remove the tenant from the users' tenant lists.
-    }
+  const idNormalized = String(id || '').toUpperCase();
+  const tenant = await redis.get(`tenant:${idNormalized}`);
+  if (tenant) {
+    // This is a simplified deletion. In a real app, you'd need to handle
+    // all associated data (users, configs, analytics, blobs, etc.).
+    await redis.del(`tenant:${idNormalized}`);
+    // You'd also need to remove the tenant from the users' tenant lists.
+  }
     res.json({ success: true });
 });
 
@@ -363,7 +454,8 @@ app.get('/api/config', async (req, res) => {
   const { tenant } = req.query;
   if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
 
-  const tenantData = await redis.get(`tenant:${tenant}`);
+  const tenantNormalized = String(tenant || '').toUpperCase();
+  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
   if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
   
   const config = await redis.get(`config:${tenantData.id}`);
@@ -375,8 +467,8 @@ app.get('/api/config', async (req, res) => {
 app.post('/api/visit', async (req, res) => {
   const { tenant } = req.query;
   if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
-
-  const tenantData = await redis.get(`tenant:${tenant}`);
+  const tenantNormalized = String(tenant || '').toUpperCase();
+  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
   if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
 
   const analytics = await redis.get(`analytics:${tenantData.id}`);
@@ -395,7 +487,8 @@ app.post('/api/click', async (req, res) => {
   const { tenant } = req.query;
   if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
   
-  const tenantData = await redis.get(`tenant:${tenant}`);
+  const tenantNormalized = String(tenant || '').toUpperCase();
+  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
   if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
 
   const { linkId } = req.body;
@@ -579,6 +672,27 @@ app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) =
     const userKeys = await redis.keys('user:*');
     const users = await Promise.all(userKeys.map(key => redis.get(key)));
     res.json(users);
+});
+
+// Temporary debug route: fetch a user by email from Redis.
+// WARNING: Disabled by default. Enable only for short-term debugging by
+// setting environment variable `ENABLE_DEBUG_ROUTES=true` in your deployment.
+app.get('/api/debug/user', async (req, res) => {
+  if (process.env.ENABLE_DEBUG_ROUTES !== 'true') {
+    return res.status(404).send('Not found');
+  }
+
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'email query parameter required' });
+
+  try {
+    const user = await redis.get(`user:${email}`);
+    if (!user) return res.json({ found: false });
+    return res.json({ found: true, user });
+  } catch (err) {
+    console.error('Debug route error:', err);
+    return res.status(500).json({ error: 'internal error' });
+  }
 });
 
 module.exports = app;

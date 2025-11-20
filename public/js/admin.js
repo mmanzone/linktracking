@@ -18,7 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             currentUser = data.user;
             currentTenant = data.tenant;
-            
+
+            const tenantName = (currentTenant && currentTenant.name) ? currentTenant.name : 'MASTER';
+            const tenantDisplay = (currentTenant && currentTenant.displayName) ? currentTenant.displayName : 'MASTER';
+
+            if (!currentTenant) {
+                currentTenant = { name: tenantName, displayName: tenantDisplay };
+            }
+
             document.getElementById('admin-title').textContent = currentTenant.displayName;
             document.getElementById('preview-link').href = `/${currentTenant.name}`;
             document.getElementById('logout-btn').textContent = `Logout ${currentUser.firstName || ''} ${currentUser.lastName || ''}`;
@@ -406,7 +413,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('create-tenant-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            const name = document.getElementById('tenant-name-input').value;
+            let name = document.getElementById('tenant-name-input').value;
+            // Normalize tenant name to uppercase before sending to server
+            name = String(name || '').toUpperCase();
             const displayName = document.getElementById('tenant-display-name-input').value;
             const email = document.getElementById('tenant-email-input').value;
             const sendWelcomeEmail = document.getElementById('send-welcome-email-checkbox').checked;

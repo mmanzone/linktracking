@@ -1,7 +1,7 @@
 [
   {
-    "id": "tenant_1",
-    "name": "master",
+    "id": "TENANT_1",
+    "name": "MASTER",
     "displayName": "Master Admin",
     "users": [
       "user_1"

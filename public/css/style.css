@@ -19,7 +19,7 @@ body {
     background-color: var(--primary-background);
     color: #1c1e21;
     margin: 0;
-    display: flex;
+    /*display: flex;*/
     justify-content: center;
     min-height: 100vh;
 }
@@ -242,6 +242,24 @@ input, textarea {
 }
 .header-logo {
     height: 128px;
+}
+#/* Admin-specific overrides: scope to admin pages only so landing pages aren't affected */
+.admin-page .main-container {
+    width: 90% !important;
+    max-width: 1400px !important;
+    margin: 20px auto !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-page .header-left {
+    gap: 12px;
+}
+
+.admin-page .header-logo {
+    /* reduce admin header logo by 50% (was 128px) */
+    height: 64px !important;
 }
 #admin-title {
     margin: 0;
