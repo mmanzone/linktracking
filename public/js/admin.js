@@ -171,14 +171,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div id="users-list"></div>
                     </div>
-                    ${!isAdmin ? `
                     <h3>Invite New User</h3>
                     <form id="invite-user-form">
                         <label>Email: <input type="email" id="invite-email-input" required></label>
+                        ${isAdmin ? `
+                        <label>Tenant:
+                            <select id="invite-tenant-select" required>
+                                ${tenants.map(tenant => `<option value="${tenant.id}">${tenant.displayName}</option>`).join('')}
+                            </select>
+                        </label>
+                        ` : ''}
                         <button type="submit">Send Invite</button>
                     </form>
                     <p id="invite-message"></p>
-                    ` : ''}
                 </div>
             `;
 
@@ -189,6 +194,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const usersList = document.getElementById('users-list');
+
+            document.getElementById('invite-user-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('invite-email-input').value;
+                const messageEl = document.getElementById('invite-message');
+                messageEl.textContent = 'Sending invite...';
+
+                let body = { email };
+                if (isAdmin) {
+                    body.tenantId = document.getElementById('invite-tenant-select').value;
+                }
+
+                fetch('/api/users/invite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }).then(() => {
+                    document.getElementById('invite-email-input').value = '';
+                    messageEl.textContent = 'Invite sent successfully!';
+                    renderUsersList(isAdmin ? document.getElementById('tenant-filter').value : '');
+                });
+            });
 
             usersList.addEventListener('click', (e) => {
                 const userRow = e.target.closest('.user-admin-row');
@@ -286,25 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                 }
             });
-
-            if (!isAdmin) {
-                document.getElementById('invite-user-form').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const email = document.getElementById('invite-email-input').value;
-                    const messageEl = document.getElementById('invite-message');
-                    messageEl.textContent = 'Sending invite...';
-    
-                    fetch('/api/users/invite', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email })
-                    }).then(() => {
-                        document.getElementById('invite-email-input').value = '';
-                        messageEl.textContent = 'Invite sent successfully!';
-                        renderUsersList();
-                    });
-                });
-            }
 
             renderUsersList();
         };
