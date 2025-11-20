@@ -1039,27 +1039,22 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const fetchAndDisplayCampaigns = () => {
-            let tenantsPromise = Promise.resolve([]);
             if (currentUser.role === 'master-admin') {
-                tenantsPromise = fetch('/api/tenants').then(res => res.json());
-            }
-
-            Promise.all([fetch('/api/config').then(res => res.json()), tenantsPromise])
-                .then(([config, allTenants]) => {
-                    if (currentUser.role === 'master-admin') {
-                        // In master admin view, we need to get campaigns from all tenants
-                        // and attach tenantId to each campaign for identification.
-                        fetch('/api/admin/all-configs').then(res => res.json()).then(allConfigs => {
-                            const allCampaigns = Object.entries(allConfigs).flatMap(([tenantId, tenantConfig]) => 
-                                tenantConfig.campaigns.map(c => ({ ...c, tenantId }))
-                            );
-                            displayCampaigns(allCampaigns, allTenants);
-                        });
-                    } else {
-                        const campaignsWithTenantId = config.campaigns.map(c => ({ ...c, tenantId: currentTenant.id }));
-                        displayCampaigns(campaignsWithTenantId, allTenants);
-                    }
+                Promise.all([
+                    fetch('/api/admin/all-configs').then(res => res.json()),
+                    fetch('/api/tenants').then(res => res.json())
+                ]).then(([allConfigs, allTenants]) => {
+                    const allCampaigns = Object.entries(allConfigs).flatMap(([tenantId, tenantConfig]) => 
+                        (tenantConfig.campaigns || []).map(c => ({ ...c, tenantId }))
+                    );
+                    displayCampaigns(allCampaigns, allTenants);
                 });
+            } else {
+                fetch('/api/config').then(res => res.json()).then(config => {
+                    const campaignsWithTenantId = (config.campaigns || []).map(c => ({ ...c, tenantId: currentTenant.id }));
+                    displayCampaigns(campaignsWithTenantId);
+                });
+            }
         };
         
         document.getElementById('add-campaign').addEventListener('click', (e) => {
@@ -1090,20 +1085,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const campaignId = event.target.closest('.campaign-admin')?.dataset.id;
             if (!campaignId) return;
 
+            if (event.target.classList.contains('view-campaign-stats')) {
+                document.querySelector('.tab-link[data-tab="analytics"]').click();
+
+                // We need to wait for the analytics tab to be rendered
+                setTimeout(() => {
+                    const campaignFilter = document.getElementById('campaign-filter');
+                    if (campaignFilter) {
+                        campaignFilter.value = campaignId;
+                        // Dispatch a 'change' event to trigger the filtering
+                        const event = new Event('change', { bubbles: true });
+                        campaignFilter.dispatchEvent(event);
+                    }
+                }, 100); // A small delay to ensure the element is available
+            }
+
             fetch('/api/config').then(res => res.json()).then(config => {
                 let newConfig = { ...config };
                 const campaign = newConfig.campaigns.find(c => c.id === campaignId);
-
-                if (event.target.classList.contains('view-campaign-stats')) {
-                    document.querySelector('.tab-link[data-tab="analytics"]').click();
-                    setTimeout(() => {
-                        const campaignFilter = document.getElementById('campaign-filter');
-                        if (campaignFilter) {
-                            campaignFilter.value = campaignId;
-                            campaignFilter.dispatchEvent(new Event('change'));
-                        }
-                    }, 100);
-                }
 
                 if (event.target.classList.contains('save-edit-campaign')) {
                     const campaignAdmin = event.target.closest('.campaign-admin');
