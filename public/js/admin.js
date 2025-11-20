@@ -18,7 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             currentUser = data.user;
             currentTenant = data.tenant;
-            
+
+            const tenantName = (currentTenant && currentTenant.name) ? currentTenant.name : 'MASTER';
+            const tenantDisplay = (currentTenant && currentTenant.displayName) ? currentTenant.displayName : 'MASTER';
+
+            if (!currentTenant) {
+                currentTenant = { name: tenantName, displayName: tenantDisplay };
+            }
+
             document.getElementById('admin-title').textContent = currentTenant.displayName;
             document.getElementById('preview-link').href = `/${currentTenant.name}`;
             document.getElementById('logout-btn').textContent = `Logout ${currentUser.firstName || ''} ${currentUser.lastName || ''}`;

@@ -20,87 +20,156 @@ console.log('Redis client initialized.');
 const initializeRedisData = async () => {
   try {
     console.log('Running data initialization...');
-    // Wipe all existing tenant-related data and recreate a single MASTER tenant.
-    // This intentionally deletes any existing tenants, configs, analytics and users
-    // so the app will start with a blank slate containing only the MASTER tenant.
-    try {
-      console.log('Wiping existing tenant, config, analytics and user keys...');
+    // If RESET_TENANTS is true, perform destructive wipe and recreate MASTER tenant.
+    // Otherwise, be non-destructive: ensure MASTER tenant and related keys exist.
+    if (process.env.RESET_TENANTS === 'true') {
+      try {
+        console.log('RESET_TENANTS=true — wiping existing tenant, config, analytics and user keys...');
 
-      const tenantKeys = await redis.keys('tenant:*');
-      for (const k of tenantKeys) {
-        await redis.del(k);
+        const tenantKeys = await redis.keys('tenant:*');
+        for (const k of tenantKeys) {
+          await redis.del(k);
+        }
+
+        const configKeys = await redis.keys('config:*');
+        for (const k of configKeys) {
+          await redis.del(k);
+        }
+
+        const analyticsKeys = await redis.keys('analytics:*');
+        for (const k of analyticsKeys) {
+          await redis.del(k);
+        }
+
+        const userKeys = await redis.keys('user:*');
+        for (const k of userKeys) {
+          await redis.del(k);
+        }
+
+        console.log('All tenant-related keys removed.');
+      } catch (err) {
+        console.error('Error while wiping keys during initialization:', err);
       }
 
-      const configKeys = await redis.keys('config:*');
-      for (const k of configKeys) {
-        await redis.del(k);
-      }
+      // Recreate a single MASTER tenant and master user (uppercase names/ids)
+      console.log('Creating MASTER tenant and master user (destructive mode)...');
+      await redis.set('tenant:MASTER', {
+        id: 'TENANT_1',
+        name: 'MASTER',
+        displayName: 'Master Admin',
+        users: ['user_1'],
+      });
 
-      const analyticsKeys = await redis.keys('analytics:*');
-      for (const k of analyticsKeys) {
-        await redis.del(k);
-      }
+      await redis.set('user:matthias@manzone.org', {
+        id: 'user_1',
+        email: 'matthias@manzone.org',
+        firstName: 'Matthias',
+        lastName: 'Manzone',
+        tenants: ['TENANT_1'],
+        role: 'master-admin',
+        disabled: false,
+        lastLogin: null
+      });
 
-      const userKeys = await redis.keys('user:*');
-      for (const k of userKeys) {
-        await redis.del(k);
-      }
+      await redis.set('config:TENANT_1', {
+        companyName: 'Your Company',
+        logo: '/images/logo.png',
+        description: 'Welcome to our page!',
+        theme: { 
+          primaryColor: '#007bff', 
+          secondaryColor: '#6c757d',
+          primaryTextColor: '#ffffff',
+          secondaryTextColor: '#ffffff',
+          backgroundColor: '#f0f2f5',
+          containerColor: '#ffffff'
+        },
+        socialLinks: [],
+        links: [],
+        campaigns: [],
+      });
 
-      console.log('All tenant-related keys removed.');
-    } catch (err) {
-      console.error('Error while wiping keys during initialization:', err);
+      await redis.set('analytics:TENANT_1', {
+        visits: [],
+        clicks: [],
+      });
+      console.log('MASTER tenant and related data created.');
+    } else {
+      // Non-destructive path: ensure MASTER tenant and related keys exist
+      console.log('RESET_TENANTS not set — ensuring MASTER tenant exists (non-destructive).');
+      try {
+        const masterExists = await redis.exists('tenant:MASTER');
+        if (!masterExists) {
+          console.log('Master tenant not found, creating...');
+          await redis.set('tenant:MASTER', {
+            id: 'TENANT_1',
+            name: 'MASTER',
+            displayName: 'Master Admin',
+            users: ['user_1'],
+          });
+          console.log('Master tenant created.');
+        }
+
+        const masterUserExists = await redis.exists('user:matthias@manzone.org');
+        if (!masterUserExists) {
+          console.log('Master user not found, creating...');
+          await redis.set('user:matthias@manzone.org', {
+            id: 'user_1',
+            email: 'matthias@manzone.org',
+            firstName: 'Matthias',
+            lastName: 'Manzone',
+            tenants: ['TENANT_1'],
+            role: 'master-admin',
+            disabled: false,
+            lastLogin: null
+          });
+          console.log('Master user created.');
+        }
+
+        const masterConfigExists = await redis.exists('config:TENANT_1');
+        if (!masterConfigExists) {
+          console.log('Master config not found, creating...');
+          await redis.set('config:TENANT_1', {
+            companyName: 'Your Company',
+            logo: '/images/logo.png',
+            description: 'Welcome to our page!',
+            theme: { 
+              primaryColor: '#007bff', 
+              secondaryColor: '#6c757d',
+              primaryTextColor: '#ffffff',
+              secondaryTextColor: '#ffffff',
+              backgroundColor: '#f0f2f5',
+              containerColor: '#ffffff'
+            },
+            socialLinks: [],
+            links: [],
+            campaigns: [],
+          });
+          console.log('Master config created.');
+        }
+
+        const masterAnalyticsExists = await redis.exists('analytics:TENANT_1');
+        if (!masterAnalyticsExists) {
+          console.log('Master analytics not found, creating...');
+          await redis.set('analytics:TENANT_1', {
+            visits: [],
+            clicks: [],
+          });
+          console.log('Master analytics created.');
+        }
+      } catch (err) {
+        console.error('Error while ensuring MASTER tenant exists:', err);
+      }
     }
-
-    // Recreate a single MASTER tenant and master user (uppercase names/ids)
-    console.log('Creating MASTER tenant and master user...');
-    await redis.set('tenant:MASTER', {
-      id: 'TENANT_1',
-      name: 'MASTER',
-      displayName: 'Master Admin',
-      users: ['user_1'],
-    });
-
-    await redis.set('user:matthias@manzone.org', {
-      id: 'user_1',
-      email: 'matthias@manzone.org',
-      firstName: 'Matthias',
-      lastName: 'Manzone',
-      tenants: ['TENANT_1'],
-      role: 'master-admin',
-      disabled: false,
-      lastLogin: null
-    });
-
-    await redis.set('config:TENANT_1', {
-      companyName: 'Your Company',
-      logo: '/images/logo.png',
-      description: 'Welcome to our page!',
-      theme: { 
-        primaryColor: '#007bff', 
-        secondaryColor: '#6c757d',
-        primaryTextColor: '#ffffff',
-        secondaryTextColor: '#ffffff',
-        backgroundColor: '#f0f2f5',
-        containerColor: '#ffffff'
-      },
-      socialLinks: [],
-      links: [],
-      campaigns: [],
-    });
-
-    await redis.set('analytics:TENANT_1', {
-      visits: [],
-      clicks: [],
-    });
-    console.log('MASTER tenant and related data created.');
     console.log('Data initialization complete.');
   } catch (error) {
     console.error('CRITICAL ERROR during data initialization:', error);
   }
 };
 
-
-initializeRedisData();
+// Start initialization immediately and expose the promise so request handlers
+// can await it to avoid race conditions where requests arrive before the
+// MASTER user/tenant have been created.
+const initializationPromise = initializeRedisData();
 // --- End Data Initialization ---
 
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -119,6 +188,12 @@ const getBaseUrl = (req) => {
 };
 
 const authenticate = async (req, res, next) => {
+  // Ensure initialization has completed so required keys (MASTER user/tenant)
+  // exist before we try to authenticate users.
+  if (typeof initializationPromise !== 'undefined') {
+    try { await initializationPromise; } catch (err) { /* ignore init errors here */ }
+  }
+
   const token = req.cookies.session_token;
 
   if (!token) {
@@ -170,6 +245,11 @@ const requireMasterAdmin = (req, res, next) => {
 app.post('/api/auth/login', async (req, res) => {
   const { email } = req.body;
   console.log(`Login attempt for email: ${email}`);
+  // Wait for initialization to complete to avoid racing with startup
+  if (typeof initializationPromise !== 'undefined') {
+    try { await initializationPromise; } catch (err) { /* ignore */ }
+  }
+
   const user = await redis.get(`user:${email}`);
 
   if (user) {
@@ -592,6 +672,27 @@ app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) =
     const userKeys = await redis.keys('user:*');
     const users = await Promise.all(userKeys.map(key => redis.get(key)));
     res.json(users);
+});
+
+// Temporary debug route: fetch a user by email from Redis.
+// WARNING: Disabled by default. Enable only for short-term debugging by
+// setting environment variable `ENABLE_DEBUG_ROUTES=true` in your deployment.
+app.get('/api/debug/user', async (req, res) => {
+  if (process.env.ENABLE_DEBUG_ROUTES !== 'true') {
+    return res.status(404).send('Not found');
+  }
+
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'email query parameter required' });
+
+  try {
+    const user = await redis.get(`user:${email}`);
+    if (!user) return res.json({ found: false });
+    return res.json({ found: true, user });
+  } catch (err) {
+    console.error('Debug route error:', err);
+    return res.status(500).json({ error: 'internal error' });
+  }
 });
 
 module.exports = app;
