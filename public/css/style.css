@@ -201,7 +201,7 @@ input, textarea {
 }
 
 .user-admin-header, .user-admin-row {
-    grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr;
+    grid-template-columns: 2fr 1.5fr 1fr 1.5fr 1.5fr;
 }
 
 .user-col-actions {
@@ -476,4 +476,18 @@ input:checked + .slider:before {
 
 .slider.round:before {
     border-radius: 50%;
+}
+
+.tenant-filter-container {
+    margin-bottom: 20px;
+}
+
+.tenant-filter-container label {
+    margin-right: 10px;
+}
+
+.tenant-filter-container select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
 }

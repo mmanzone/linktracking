@@ -140,196 +140,151 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderUsersTab() {
         const isAdmin = currentUser.role === 'master-admin';
         const userApiUrl = isAdmin ? '/api/admin/users' : '/api/users';
-
-        adminContentDiv.innerHTML = `
-            <div id="users-tab" class="tab-content active">
-                <h2>User Management</h2>
-                <div id="users-list-container">
-                    <div class="user-admin-header">
-                        <div class="user-col-email sortable" data-sort="email">Email</div>
-                        <div class="user-col-name sortable" data-sort="firstName">Full Name</div>
-                        <div class="user-col-login sortable" data-sort="lastLogin">Last Connection</div>
-                        <div class="user-col-actions">Actions</div>
+    
+        let tenants = [];
+        let tenantFilter = '';
+    
+        const setupUsersTab = () => {
+            if (isAdmin) {
+                tenantFilter = `
+                    <div class="tenant-filter-container">
+                        <label for="tenant-filter">Filter by Tenant:</label>
+                        <select id="tenant-filter">
+                            <option value="">All Tenants</option>
+                            ${tenants.map(tenant => `<option value="${tenant.id}">${tenant.displayName}</option>`).join('')}
+                        </select>
                     </div>
-                    <div id="users-list"></div>
+                `;
+            }
+    
+            adminContentDiv.innerHTML = `
+                <div id="users-tab" class="tab-content active">
+                    <h2>User Management</h2>
+                    ${tenantFilter}
+                    <div id="users-list-container">
+                        <div class="user-admin-header">
+                            <div class="user-col-email sortable" data-sort="email">Email</div>
+                            <div class="user-col-name sortable" data-sort="firstName">Full Name</div>
+                            ${isAdmin ? '<div class="user-col-tenant">Tenant</div>' : ''}
+                            <div class="user-col-login sortable" data-sort="lastLogin">Last Connection</div>
+                            <div class="user-col-actions">Actions</div>
+                        </div>
+                        <div id="users-list"></div>
+                    </div>
+                    ${!isAdmin ? `
+                    <h3>Invite New User</h3>
+                    <form id="invite-user-form">
+                        <label>Email: <input type="email" id="invite-email-input" required></label>
+                        <button type="submit">Send Invite</button>
+                    </form>
+                    <p id="invite-message"></p>
+                    ` : ''}
                 </div>
-                ${!isAdmin ? `
-                <h3>Invite New User</h3>
-                <form id="invite-user-form">
-                    <label>Email: <input type="email" id="invite-email-input" required></label>
-                    <button type="submit">Send Invite</button>
-                </form>
-                <p id="invite-message"></p>
-                ` : ''}
-            </div>
-        `;
-
-        const usersList = document.getElementById('users-list');
-        fetch(userApiUrl)
-            .then(res => res.json())
-            .then(users => {
-                let sortColumn = 'lastName';
-                let sortDirection = 'asc';
-
-                const renderUsers = () => {
-                    usersList.innerHTML = '';
-                    
-                    users.sort((a, b) => {
-                        let aVal = a[sortColumn] || '';
-                        let bVal = b[sortColumn] || '';
-                        if (sortDirection === 'asc') {
-                            return aVal.localeCompare(bVal);
-                        } else {
-                            return bVal.localeCompare(aVal);
-                        }
-                    });
-
-                    const currentUserIndex = users.findIndex(u => u.id === currentUser.id);
-                    if (currentUserIndex > -1) {
-                        const [currentUserData] = users.splice(currentUserIndex, 1);
-                        users.unshift(currentUserData);
+            `;
+    
+            if (isAdmin) {
+                document.getElementById('tenant-filter').addEventListener('change', (e) => {
+                    renderUsersList(e.target.value);
+                });
+            }
+    
+            renderUsersList();
+        };
+    
+        const renderUsersList = (selectedTenantId = '') => {
+            const usersList = document.getElementById('users-list');
+            fetch(userApiUrl)
+                .then(res => res.json())
+                .then(users => {
+                    let filteredUsers = users;
+                    if (selectedTenantId) {
+                        filteredUsers = users.filter(user => user.tenants.includes(selectedTenantId));
                     }
-
-                    users.forEach(user => {
-                        const userEl = document.createElement('div');
-                        userEl.classList.add('user-admin-row');
-                        if (user.disabled) {
-                            userEl.classList.add('inactive');
-                        }
-                        userEl.dataset.userId = user.id;
-                        const isCurrentUser = user.id === currentUser.id;
+    
+                    let sortColumn = 'lastName';
+                    let sortDirection = 'asc';
+    
+                    const renderUsers = () => {
+                        usersList.innerHTML = '';
                         
-                        userEl.innerHTML = `
-                            <div class="user-col-email">${user.email}</div>
-                            <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
-                            <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
-                            <div class="user-col-actions">
-                                <label class="switch">
-                                    <input type="checkbox" class="disable-user-toggle" ${!user.disabled ? 'checked' : ''} ${isCurrentUser ? 'disabled' : ''}>
-                                    <span class="slider round"></span>
-                                </label>
-                                <button class="edit-user">Edit</button>
-                                ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
-                            </div>
-                        `;
-                        usersList.appendChild(userEl);
-                    });
-                };
-
-                document.querySelectorAll('.user-admin-header .sortable').forEach(header => {
-                    header.addEventListener('click', () => {
-                        const newSortColumn = header.dataset.sort;
-                        if (sortColumn === newSortColumn) {
-                            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-                        } else {
-                            sortColumn = newSortColumn;
-                            sortDirection = 'asc';
+                        filteredUsers.sort((a, b) => {
+                            let aVal = a[sortColumn] || '';
+                            let bVal = b[sortColumn] || '';
+                            if (sortDirection === 'asc') {
+                                return aVal.localeCompare(bVal);
+                            } else {
+                                return bVal.localeCompare(aVal);
+                            }
+                        });
+    
+                        const currentUserIndex = filteredUsers.findIndex(u => u.id === currentUser.id);
+                        if (currentUserIndex > -1) {
+                            const [currentUserData] = filteredUsers.splice(currentUserIndex, 1);
+                            filteredUsers.unshift(currentUserData);
                         }
-                        renderUsers();
+    
+                        filteredUsers.forEach(user => {
+                            const userEl = document.createElement('div');
+                            userEl.classList.add('user-admin-row');
+                            if (user.disabled) {
+                                userEl.classList.add('inactive');
+                            }
+                            userEl.dataset.userId = user.id;
+                            const isCurrentUser = user.id === currentUser.id;
+                            
+                            let tenantDisplay = '';
+                            if (isAdmin) {
+                                const userTenants = user.tenants.map(tenantId => {
+                                    const tenant = tenants.find(t => t.id === tenantId);
+                                    return tenant ? tenant.displayName : 'Unknown';
+                                }).join(', ');
+                                tenantDisplay = `<div class="user-col-tenant">${userTenants}</div>`;
+                            }
+    
+                            userEl.innerHTML = `
+                                <div class="user-col-email">${user.email}</div>
+                                <div class="user-col-name">${user.firstName || ''} ${user.lastName || ''}</div>
+                                ${tenantDisplay}
+                                <div class="user-col-login">${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
+                                <div class="user-col-actions">
+                                    <label class="switch">
+                                        <input type="checkbox" class="disable-user-toggle" ${!user.disabled ? 'checked' : ''} ${isCurrentUser ? 'disabled' : ''}>
+                                        <span class="slider round"></span>
+                                    </label>
+                                    <button class="edit-user">Edit</button>
+                                    ${!isCurrentUser ? '<button class="delete-user">Delete</button>' : ''}
+                                </div>
+                            `;
+                            usersList.appendChild(userEl);
+                        });
+                    };
+    
+                    document.querySelectorAll('.user-admin-header .sortable').forEach(header => {
+                        header.addEventListener('click', () => {
+                            const newSortColumn = header.dataset.sort;
+                            if (sortColumn === newSortColumn) {
+                                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                            } else {
+                                sortColumn = newSortColumn;
+                                sortDirection = 'asc';
+                            }
+                            renderUsers();
+                        });
                     });
+    
+                    renderUsers();
                 });
-
-                renderUsers();
-            });
+        };
         
-        usersList.addEventListener('click', (e) => {
-            const userId = e.target.closest('.user-admin-row').dataset.userId;
-            
-            if (e.target.classList.contains('delete-user')) {
-                if (confirm('Are you sure you want to delete this user?')) {
-                    fetch(`/api/users/${userId}`, { method: 'DELETE' })
-                        .then(() => loadAdminContent('users'));
-                }
-            }
-            if (e.target.classList.contains('edit-user')) {
-                const row = e.target.closest('.user-admin-row');
-                fetch(userApiUrl).then(res => res.json()).then(users => {
-                    const user = users.find(u => u.id === userId);
-                    row.innerHTML = `
-                        <div class="user-col-email"><input type="email" class="edit-email" value="${user.email}"></div>
-                        <div class="user-col-name">
-                            <input type="text" class="edit-firstName" value="${user.firstName || ''}" placeholder="First Name">
-                            <input type="text" class="edit-lastName" value="${user.lastName || ''}" placeholder="Last Name">
-                        </div>
-                        <div class="user-col-login"></div>
-                        <div class="user-col-actions">
-                            <button class="save-user" data-id="${user.id}">Save</button>
-                            <button class="cancel-edit">Cancel</button>
-                        </div>
-                    `;
+        if (isAdmin) {
+            fetch('/api/tenants')
+                .then(res => res.json())
+                .then(fetchedTenants => {
+                    tenants = fetchedTenants;
+                    setupUsersTab();
                 });
-            }
-            if (e.target.classList.contains('save-user')) {
-                const row = e.target.closest('.user-admin-row');
-                const body = {
-                    firstName: row.querySelector('.edit-firstName').value,
-                    lastName: row.querySelector('.edit-lastName').value,
-                    email: row.querySelector('.edit-email').value,
-                    disabled: false // This will be handled by the toggle
-                };
-                fetch(`/api/users/${userId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                }).then(() => {
-                    const button = e.target;
-                    button.classList.add('success');
-                    button.textContent = 'Saved!';
-                    setTimeout(() => {
-                        loadAdminContent('users');
-                    }, 1000);
-                });
-            }
-            if (e.target.classList.contains('cancel-edit')) {
-                loadAdminContent('users');
-            }
-        });
-
-        usersList.addEventListener('change', (e) => {
-            if (e.target.classList.contains('disable-user-toggle')) {
-                const userRow = e.target.closest('.user-admin-row');
-                const userId = userRow.dataset.userId;
-                const isDisabled = !e.target.checked;
-
-                fetch(userApiUrl)
-                    .then(res => res.json())
-                    .then(users => {
-                        const user = users.find(u => u.id === userId);
-                        if (user) {
-                            user.disabled = isDisabled;
-                            fetch(`/api/users/${userId}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(user)
-                            }).then(() => {
-                                if (isDisabled) {
-                                    userRow.classList.add('inactive');
-                                } else {
-                                    userRow.classList.remove('inactive');
-                                }
-                            });
-                        }
-                    });
-            }
-        });
-
-        if (!isAdmin) {
-            document.getElementById('invite-user-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const email = document.getElementById('invite-email-input').value;
-                const messageEl = document.getElementById('invite-message');
-                messageEl.textContent = 'Sending invite...';
-
-                fetch('/api/users/invite', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                }).then(() => {
-                    document.getElementById('invite-email-input').value = '';
-                    messageEl.textContent = 'Invite sent successfully!';
-                    loadAdminContent('users');
-                });
-            });
+        } else {
+            setupUsersTab();
         }
     }
     
