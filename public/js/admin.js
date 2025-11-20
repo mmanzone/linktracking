@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div id="users-list"></div>
                     </div>
-                    <h3>Invite New User</h3>
+                    <h3>Create a new user</h3>
                     <form id="invite-user-form">
                     ${isAdmin ? `
                     <label>Tenant:
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </label>
                         <span>Send welcome email</span>
                     </div>
-                    <button type="submit">Send Invite</button>
+                    <button type="submit">Create user</button>
                 </form>
                 <p id="invite-message"></p>
             </div>
@@ -532,9 +532,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderGeneralTab(config) {
+        const tenantUrl = `${window.location.origin}/${currentTenant.name}`;
         adminContentDiv.innerHTML = `
             <div id="general-tab" class="tab-content active">
                 <h2>Landing Page Content</h2>
+                <p>Your landing page URL is: <a href="${tenantUrl}" target="_blank">${tenantUrl}</a></p>
                 <label>Organisation name: <input type="text" id="company-name-input" value="${config.companyName}"></label><br>
                 <label>Introduction Text: <textarea id="description-input">${config.description}</textarea></label><br>
                 <label>Logo: <input type="file" id="logo-upload"></label><br>
@@ -597,8 +599,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        const tenantUrl = `${window.location.origin}/${currentTenant.name}`;
-        
         new QRCode(document.getElementById("qrcode-standard"), {
             text: tenantUrl,
             width: 256,
@@ -994,7 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const campaignsList = document.getElementById('campaigns-list');
         const campaignDateFilter = document.getElementById('campaign-date-filter');
 
-        const displayCampaigns = (campaigns, config) => {
+        const displayCampaigns = (campaigns, allTenants = []) => {
             campaignsList.innerHTML = '';
             const filterValue = campaignDateFilter.value;
             const now = new Date();
@@ -1014,9 +1014,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     const campaignElement = document.createElement('div');
                     campaignElement.classList.add('campaign-admin');
                     campaignElement.dataset.id = campaign.id;
+
+                    let campaignName = campaign.name;
+                    if (currentUser.role === 'master-admin' && allTenants.length > 0) {
+                        const tenant = allTenants.find(t => t.id === campaign.tenantId);
+                        if (tenant) {
+                            campaignName = `${tenant.displayName} - ${campaign.name}`;
+                        }
+                    }
+
                     campaignElement.innerHTML = `
                         <div>
-                            <strong>${campaign.name}</strong><br>
+                            <strong>${campaignName}</strong><br>
                             <small>${new Date(campaign.startDate).toLocaleDateString()} - ${new Date(campaign.endDate).toLocaleDateString()}</small>
                         </div>
                         <div>
@@ -1030,9 +1039,27 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const fetchAndDisplayCampaigns = () => {
-            fetch('/api/config').then(res => res.json()).then(config => {
-                displayCampaigns(config.campaigns, config);
-            });
+            let tenantsPromise = Promise.resolve([]);
+            if (currentUser.role === 'master-admin') {
+                tenantsPromise = fetch('/api/tenants').then(res => res.json());
+            }
+
+            Promise.all([fetch('/api/config').then(res => res.json()), tenantsPromise])
+                .then(([config, allTenants]) => {
+                    if (currentUser.role === 'master-admin') {
+                        // In master admin view, we need to get campaigns from all tenants
+                        // and attach tenantId to each campaign for identification.
+                        fetch('/api/admin/all-configs').then(res => res.json()).then(allConfigs => {
+                            const allCampaigns = Object.entries(allConfigs).flatMap(([tenantId, tenantConfig]) => 
+                                tenantConfig.campaigns.map(c => ({ ...c, tenantId }))
+                            );
+                            displayCampaigns(allCampaigns, allTenants);
+                        });
+                    } else {
+                        const campaignsWithTenantId = config.campaigns.map(c => ({ ...c, tenantId: currentTenant.id }));
+                        displayCampaigns(campaignsWithTenantId, allTenants);
+                    }
+                });
         };
         
         document.getElementById('add-campaign').addEventListener('click', (e) => {
@@ -1066,6 +1093,17 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch('/api/config').then(res => res.json()).then(config => {
                 let newConfig = { ...config };
                 const campaign = newConfig.campaigns.find(c => c.id === campaignId);
+
+                if (event.target.classList.contains('view-campaign-stats')) {
+                    document.querySelector('.tab-link[data-tab="analytics"]').click();
+                    setTimeout(() => {
+                        const campaignFilter = document.getElementById('campaign-filter');
+                        if (campaignFilter) {
+                            campaignFilter.value = campaignId;
+                            campaignFilter.dispatchEvent(new Event('change'));
+                        }
+                    }, 100);
+                }
 
                 if (event.target.classList.contains('save-edit-campaign')) {
                     const campaignAdmin = event.target.closest('.campaign-admin');
