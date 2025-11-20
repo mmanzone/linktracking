@@ -1162,86 +1162,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
             }
 
-            fetch('/api/config').then(res => res.json()).then(config => {
-                let newConfig = { ...config };
-                const campaign = newConfig.campaigns.find(c => c.id === campaignId);
+            const campaignDataPromise = currentUser.role === 'master-admin'
+                ? fetch('/api/admin/all-configs').then(res => res.json())
+                : fetch('/api/config').then(res => res.json());
 
-                if (event.target.classList.contains('save-edit-campaign')) {
-                    const campaignAdmin = event.target.closest('.campaign-admin');
-                    const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
-                    const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
-                    
-                    if (newEndDate < newStartDate) {
-                        alert('Error: End date cannot be before the start date.');
-                        return;
+            campaignDataPromise.then(allConfigs => {
+                let campaign, tenantId;
+                if (currentUser.role === 'master-admin') {
+                    // Find the tenant that owns the campaign
+                    for (const tid in allConfigs) {
+                        const found = allConfigs[tid].campaigns.find(c => c.id === campaignId);
+                        if (found) {
+                            campaign = found;
+                            tenantId = tid;
+                            break;
+                        }
                     }
-                    newEndDate.setHours(23, 59, 59, 999); 
-
-                    const overlaps = newConfig.campaigns.some(c => {
-                        if (c.id === campaignId) return false;
-                        const existingStart = new Date(c.startDate);
-                        const existingEnd = new Date(c.endDate);
-                        return (newStartDate < existingEnd && newEndDate > existingStart);
-                    });
-
-                    if (overlaps) {
-                        alert('Error: Campaign dates overlap with an existing campaign.');
-                        return;
-                    }
-
-                    campaign.name = campaignAdmin.querySelector('.campaign-name-edit').value;
-                    campaign.description = campaignAdmin.querySelector('.campaign-description-edit').value;
-                    campaign.message = campaignAdmin.querySelector('.campaign-message-edit').value;
-                    campaign.startDate = newStartDate.toISOString();
-                    campaign.endDate = newEndDate.toISOString();
-                    
-                    const linkRows = campaignAdmin.querySelectorAll('.campaign-link-row');
-                    const newLinkOrder = Array.from(linkRows).map(row => row.dataset.id);
-
-                    campaign.links = Array.from(linkRows)
-                        .filter(row => row.querySelector('input[type="checkbox"]').checked)
-                        .map(row => row.dataset.id);
-                    
-                    const allLinksFromConfig = new Set(config.links.map(l => l.id));
-                    const campaignLinks = new Set(campaign.links);
-                    const remainingLinks = config.links.filter(l => !campaignLinks.has(l.id)).map(l => l.id);
-                    
-                    campaign.links.sort((a, b) => newLinkOrder.indexOf(a) - newLinkOrder.indexOf(b));
-
-                    saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
+                } else {
+                    campaign = allConfigs.campaigns.find(c => c.id === campaignId);
+                    tenantId = currentTenant.id;
                 }
 
-                if (event.target.classList.contains('cancel-edit-campaign')) {
-                    loadAdminContent('campaigns');
+                if (!campaign) {
+                    console.error("Campaign not found");
+                    return;
                 }
-
+                
                 if (event.target.classList.contains('edit-campaign')) {
                     const campaignAdmin = event.target.closest('.campaign-admin');
+                    const linksForTenant = (currentUser.role === 'master-admin' ? allConfigs[tenantId].links : allConfigs.links) || [];
                     
                     const campaignLinkIds = new Set(campaign.links);
                     const sortedLinksForCampaign = [
-                        ...campaign.links.map(id => config.links.find(l => l.id === id)).filter(Boolean),
-                        ...config.links.filter(l => !campaignLinkIds.has(l.id))
+                        ...linksForTenant.filter(l => campaignLinkIds.has(l.id)),
+                        ...linksForTenant.filter(l => !campaignLinkIds.has(l.id))
                     ];
-
-                    const campaignLinksHtml = sortedLinksForCampaign.map(link => `
-                        <div class="campaign-link-row ${!campaign.links.includes(link.id) ? 'inactive' : ''}" data-id="${link.id}">
-                            <div class="link-order">
-                                <button class="move-link-up">▲</button>
-                                <button class="move-link-down">▼</button>
-                            </div>
-                            <div>
-                                <label class="switch">
-                                    <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
-                                    <span class="slider round"></span>
-                                </label>
-                            </div>
-                            <div class="link" style="display: flex; align-items: center; gap: 10px;">
-                                <img src="${link.icon}" alt="${link.text}" style="height: 48px; width: 48px;">
-                                <span style="font-weight: bold;">${link.text}</span>
-                            </div>
-                        </div>
-                    `).join('');
 
                     campaignAdmin.innerHTML = `
                         <div style="width: 100%;">
@@ -1254,7 +1209,26 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <h4>Manage links for this campaign</h4>
                             <p style="font-size: 0.9rem; color: #606770;">You can choose which links from the library you want to display and in which order. If you need to add a link for that campaign, you need to create it in the Links admin menu first. </p>
-                            <div class="campaign-links-edit">${campaignLinksHtml}</div>
+                            <div class="campaign-links-edit">
+                                ${sortedLinksForCampaign.map(link => `
+                                    <div class="campaign-link-row ${!campaign.links.includes(link.id) ? 'inactive' : ''}" data-id="${link.id}">
+                                        <div class="link-order">
+                                            <button class="move-link-up">▲</button>
+                                            <button class="move-link-down">▼</button>
+                                        </div>
+                                        <div>
+                                            <label class="switch">
+                                                <input type="checkbox" value="${link.id}" ${campaign.links.includes(link.id) ? 'checked' : ''}>
+                                                <span class="slider round"></span>
+                                            </label>
+                                        </div>
+                                        <div class="link" style="display: flex; align-items: center; gap: 10px;">
+                                            <img src="${link.icon}" alt="${link.text}" style="height: 48px; width: 48px;">
+                                            <span style="font-weight: bold;">${link.text}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
                             <div class="button-container">
                                 <button class="save-edit-campaign">Save Campaign</button>
                                 <button class="cancel-edit-campaign">Cancel</button>
@@ -1282,13 +1256,65 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
+                if (event.target.classList.contains('save-edit-campaign')) {
+                    const campaignAdmin = event.target.closest('.campaign-admin');
+                    const newStartDate = new Date(campaignAdmin.querySelector('.campaign-start-edit').value);
+                    const newEndDate = new Date(campaignAdmin.querySelector('.campaign-end-edit').value);
+                    
+                    if (newEndDate < newStartDate) {
+                        alert('Error: End date cannot be before the start date.');
+                        return;
+                    }
+                    newEndDate.setHours(23, 59, 59, 999); 
+
+                    const overlaps = (currentUser.role === 'master-admin' ? allConfigs[tenantId].campaigns : allConfigs.campaigns).some(c => {
+                        if (c.id === campaignId) return false;
+                        const existingStart = new Date(c.startDate);
+                        const existingEnd = new Date(c.endDate);
+                        return (newStartDate < existingEnd && newEndDate > existingStart);
+                    });
+
+                    if (overlaps) {
+                        alert('Error: Campaign dates overlap with an existing campaign.');
+                        return;
+                    }
+
+                    campaign.name = campaignAdmin.querySelector('.campaign-name-edit').value;
+                    campaign.description = campaignAdmin.querySelector('.campaign-description-edit').value;
+                    campaign.message = campaignAdmin.querySelector('.campaign-message-edit').value;
+                    campaign.startDate = newStartDate.toISOString();
+                    campaign.endDate = newEndDate.toISOString();
+                    
+                    const linkRows = campaignAdmin.querySelectorAll('.campaign-link-row');
+                    campaign.links = Array.from(linkRows)
+                        .filter(row => row.querySelector('input[type="checkbox"]').checked)
+                        .map(row => row.dataset.id);
+                    
+                    let configToSave = currentUser.role === 'master-admin' ? allConfigs[tenantId] : allConfigs;
+                    const campaignIndex = configToSave.campaigns.findIndex(c => c.id === campaignId);
+                    configToSave.campaigns[campaignIndex] = campaign;
+                    
+                    fetch(`/api/config`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(configToSave)
+                    }).then(() => fetchAndDisplayCampaigns());
+                }
+
+                if (event.target.classList.contains('cancel-edit-campaign')) {
+                    fetchAndDisplayCampaigns();
+                }
+
                 if (event.target.classList.contains('delete-campaign')) {
                     if (confirm('Are you sure you want to delete this campaign?')) {
-                        fetch('/api/config').then(res => res.json()).then(config => {
-                            let newConfig = { ...config };
-                            newConfig.campaigns = newConfig.campaigns.filter(c => c.id !== campaignId);
-                            saveConfig(newConfig, event.target).then(() => loadAdminContent('campaigns'));
-                        });
+                        let configToSave = currentUser.role === 'master-admin' ? allConfigs[tenantId] : allConfigs;
+                        configToSave.campaigns = configToSave.campaigns.filter(c => c.id !== campaignId);
+                        
+                        fetch(`/api/config`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(configToSave)
+                        }).then(() => fetchAndDisplayCampaigns());
                     }
                 }
             });

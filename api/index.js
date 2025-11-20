@@ -460,6 +460,37 @@ app.post('/api/config', authenticate, async (req, res) => {
   res.sendStatus(200);
 });
 
+app.post('/api/click', async (req, res) => {
+  const { tenant } = req.query;
+  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
+  
+  const tenantNormalized = String(tenant || '').toUpperCase();
+  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
+  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+
+  const { linkId } = req.body;
+  const analytics = await redis.get(`analytics:${tenantData.id}`);
+  if (!analytics) {
+    // Initialize analytics if it doesn't exist
+    await redis.set(`analytics:${tenantData.id}`, { visits: [], clicks: [{
+        timestamp: new Date().toISOString(),
+        linkId,
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+    }] });
+    return res.sendStatus(200);
+  }
+
+  analytics.clicks.push({
+    timestamp: new Date().toISOString(),
+    linkId,
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    userAgent: req.headers['user-agent'],
+  });
+  await redis.set(`analytics:${tenantData.id}`, analytics);
+  res.sendStatus(200);
+});
+
 app.get('/api/admin/all-configs', authenticate, requireMasterAdmin, async (req, res) => {
     const tenantKeys = await redis.keys('tenant:*');
     const allConfigs = {};
@@ -476,9 +507,32 @@ app.get('/api/admin/all-configs', authenticate, requireMasterAdmin, async (req, 
 });
 
 app.get('/api/analytics', authenticate, async (req, res) => {
-  const { tenantId } = req;
-  const analytics = await redis.get(`analytics:${tenantId}`);
-  res.json(analytics);
+    const { tenantId } = req;
+    const analytics = await redis.get(`analytics:${tenantId}`);
+    res.json(analytics);
+});
+
+app.get('/api/admin/analytics', authenticate, requireMasterAdmin, async (req, res) => {
+    const { tenantId } = req.query;
+    if (tenantId) {
+        // Fetch for a specific tenant
+        const analytics = await redis.get(`analytics:${tenantId}`);
+        return res.json(analytics);
+    } else {
+        // Fetch for all tenants
+        const tenantKeys = await redis.keys('tenant:*');
+        const tenants = await Promise.all(tenantKeys.map(key => redis.get(key)));
+        const allAnalytics = {};
+        for (const tenant of tenants) {
+            if (tenant && tenant.id) {
+                const analytics = await redis.get(`analytics:${tenant.id}`);
+                if (analytics) {
+                    allAnalytics[tenant.id] = analytics;
+                }
+            }
+        }
+        return res.json(allAnalytics);
+    }
 });
 
 app.post('/api/visit', async (req, res) => {
