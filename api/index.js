@@ -385,7 +385,8 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     if (sendWelcomeEmail) {
         try {
             const baseUrl = getBaseUrl(req);
-            await resend.emails.send({
+        // Use the normalized name in the welcome URL
+        await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
                 subject: `Welcome to linkreach.xyz, ${tenantToInviteTo.displayName}!`,
