@@ -278,7 +278,7 @@ app.post('/api/auth/login', async (req, res) => {
     try {
       const baseUrl = getBaseUrl(req);
       await resend.emails.send({
-        from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+        from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'linkreach@manzone.org'}>`,
         to: email,
         subject: 'Your Login Link for linkreach.xyz',
         html: `
@@ -387,7 +387,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
             const baseUrl = getBaseUrl(req);
         // Use the normalized name in the welcome URL
         await resend.emails.send({
-                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'linkreach@manzone.org'}>`,
                 to: email,
                 subject: `Welcome to linkreach.xyz, ${displayName}!`,
                 html: `
@@ -656,7 +656,7 @@ app.post('/api/users/invite', authenticate, async (req, res) => {
         try {
             const baseUrl = getBaseUrl(req);
             await resend.emails.send({
-                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'linkreach@manzone.org'}>`,
                 to: email,
                 subject: `You've been invited to ${tenantToInviteTo.displayName} on linkreach.xyz`,
                 html: `
@@ -703,7 +703,7 @@ app.post('/api/users/:id/send-magic-link', authenticate, async (req, res) => {
 
         try {
             await resend.emails.send({
-                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'linkreach@manzone.org'}>`,
                 to: user.email,
                 subject: 'Your Login Link for linkreach.xyz',
                 html: `
