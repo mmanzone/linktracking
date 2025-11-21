@@ -78,7 +78,7 @@ const initializeRedisData = async () => {
       });
 
       await redis.set('config:TENANT_1', {
-        companyName: 'Your Company',
+        companyName: 'MASTER',
         logo: '/images/logo.png',
         description: 'Welcome to our page!',
         theme: { 
