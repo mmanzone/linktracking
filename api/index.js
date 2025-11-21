@@ -1,3 +1,9 @@
+// --- JWT Secret Check ---
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL ERROR: JWT_SECRET environment variable is not set.');
+  process.exit(1);
+}
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
@@ -311,6 +317,18 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.get('/api/auth/verify', (req, res) => {
+    const { token } = req.query;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const sessionToken = jwt.sign({ email: decoded.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        res.cookie('session_token', sessionToken, { httpOnly: true, secure: true, maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
+        res.redirect('/admin.html');
+    } catch (error) {
+        res.status(401).send('Invalid or expired token.');
+    }
+});
+
 app.get('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     // In a real app with many tenants, you'd use SCAN or a secondary index.
     // For this example, we'll assume a small number of tenants.
@@ -371,7 +389,7 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
         await resend.emails.send({
                 from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
                 to: email,
-                subject: `Welcome to linkreach.xyz, ${displayName}!`,
+                subject: `Welcome to linkreach.xyz, ${tenantToInviteTo.displayName}!`,
                 html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
     <div style="margin-bottom: 20px;">
@@ -380,8 +398,8 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     </div>
   <h2>Your linkreach.xyz account is ready!</h2>
   <p>Hello,</p>
-  <p>An account has been created for you on linkreach.xyz for the workspace "${displayName}". You can now log in at any time to manage your links and track their performance.</p>
-  <p>Your public landing page is available at: <a href="${baseUrl}/${normalizedName}">${baseUrl}/${normalizedName}</a></p>
+  <p>An account has been created for you on linkreach.xyz for the workspace "${tenantToInviteTo.displayName}". You can now log in at any time to manage your links and track their performance.</p>
+  <p>Your public landing page is available at: <a href="${baseUrl}/${tenantToInviteTo.name}">${baseUrl}/${tenantToInviteTo.name}</a></p>
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Log in to your account</a>
   </p>
@@ -391,50 +409,11 @@ app.post('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
             });
         } catch (error) {
             console.error('Error sending welcome email:', error);
-            // We don't want to fail the whole request if the email fails
         }
     }
-    
+
     res.json({ success: true });
 });
-
-app.put('/api/tenants/:id', authenticate, requireMasterAdmin, async (req, res) => {
-    const { id } = req.params;
-    const { displayName } = req.body;
-  const idNormalized = String(id || '').toUpperCase();
-  const tenant = await redis.get(`tenant:${idNormalized}`);
-  if (tenant) {
-    tenant.displayName = displayName;
-    await redis.set(`tenant:${idNormalized}`, tenant);
-  }
-    res.json({ success: true });
-});
-
-app.delete('/api/tenants/:id', authenticate, requireMasterAdmin, async (req, res) => {
-    const { id } = req.params;
-  const idNormalized = String(id || '').toUpperCase();
-  const tenant = await redis.get(`tenant:${idNormalized}`);
-  if (tenant) {
-    // This is a simplified deletion. In a real app, you'd need to handle
-    // all associated data (users, configs, analytics, blobs, etc.).
-    await redis.del(`tenant:${idNormalized}`);
-    // You'd also need to remove the tenant from the users' tenant lists.
-  }
-    res.json({ success: true });
-});
-
-app.get('/api/auth/verify', (req, res) => {
-  const { token } = req.query;
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const sessionToken = jwt.sign({ email: decoded.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('session_token', sessionToken, { httpOnly: true, secure: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
-    res.redirect('/admin.html');
-  } catch (error) {
-    res.status(401).send('Invalid or expired token.');
-  }
-});
-
 
 app.post('/api/upload', authenticate, async (req, res) => {
     const { tenantId } = req;
@@ -451,35 +430,46 @@ app.get('/api/admin/config', authenticate, async (req, res) => {
 });
 
 app.get('/api/config', async (req, res) => {
-  const { tenant } = req.query;
-  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
+    const { tenant } = req.query;
 
-  const tenantNormalized = String(tenant || '').toUpperCase();
-  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
-  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
-  
-  const config = await redis.get(`config:${tenantData.id}`);
-  if (!config) return res.status(404).json({ error: 'Configuration not found for tenant.' });
+    // This is a workaround for the fact that authenticate is not run on this route
+    const token = req.cookies.session_token;
+    let user = null;
+    let tenantId = null;
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            user = await redis.get(`user:${decoded.email}`);
+            if (user) {
+                tenantId = user.tenants[0];
+            }
+        } catch (e) {
+            // Ignore invalid tokens
+        }
+    }
 
-  res.json(config);
+    if (!tenant) {
+        if (user && tenantId) {
+            const config = await redis.get(`config:${tenantId}`);
+            return res.json(config);
+        }
+        return res.status(400).json({ error: 'Tenant query parameter is required.' });
+    }
+
+    const tenantNormalized = String(tenant || '').toUpperCase();
+    const tenantData = await redis.get(`tenant:${tenantNormalized}`);
+    if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
+    
+    const config = await redis.get(`config:${tenantData.id}`);
+    if (!config) return res.status(404).json({ error: 'Configuration not found for tenant.' });
+
+    res.json(config);
 });
 
-app.post('/api/visit', async (req, res) => {
-  const { tenant } = req.query;
-  if (!tenant) return res.status(400).json({ error: 'Tenant query parameter is required.' });
-  const tenantNormalized = String(tenant || '').toUpperCase();
-  const tenantData = await redis.get(`tenant:${tenantNormalized}`);
-  if (!tenantData) return res.status(404).json({ error: 'Tenant not found.' });
-
-  const analytics = await redis.get(`analytics:${tenantData.id}`);
-  if (!analytics) return res.sendStatus(200);
-
-  analytics.visits.push({
-    timestamp: new Date().toISOString(),
-    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-    userAgent: req.headers['user-agent'],
-  });
-  await redis.set(`analytics:${tenantData.id}`, analytics);
+app.post('/api/config', authenticate, async (req, res) => {
+  const { tenantId } = req;
+  const newConfig = req.body;
+  await redis.set(`config:${tenantId}`, newConfig);
   res.sendStatus(200);
 });
 
@@ -493,7 +483,16 @@ app.post('/api/click', async (req, res) => {
 
   const { linkId } = req.body;
   const analytics = await redis.get(`analytics:${tenantData.id}`);
-  if (!analytics) return res.sendStatus(200);
+  if (!analytics) {
+    // Initialize analytics if it doesn't exist
+    await redis.set(`analytics:${tenantData.id}`, { visits: [], clicks: [{
+        timestamp: new Date().toISOString(),
+        linkId,
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+    }] });
+    return res.sendStatus(200);
+  }
 
   analytics.clicks.push({
     timestamp: new Date().toISOString(),
@@ -505,17 +504,25 @@ app.post('/api/click', async (req, res) => {
   res.sendStatus(200);
 });
 
-app.post('/api/config', authenticate, async (req, res) => {
-  const { tenantId } = req;
-  const newConfig = req.body;
-  await redis.set(`config:${tenantId}`, newConfig);
-  res.sendStatus(200);
+app.get('/api/admin/all-configs', authenticate, requireMasterAdmin, async (req, res) => {
+    const tenantKeys = await redis.keys('tenant:*');
+    const allConfigs = {};
+    for (const key of tenantKeys) {
+        const tenant = await redis.get(key);
+        if (tenant && tenant.id) {
+            const config = await redis.get(`config:${tenant.id}`);
+            if (config) {
+                allConfigs[tenant.id] = config;
+            }
+        }
+    }
+    res.json(allConfigs);
 });
 
 app.get('/api/analytics', authenticate, async (req, res) => {
-  const { tenantId } = req;
-  const analytics = await redis.get(`analytics:${tenantId}`);
-  res.json(analytics);
+    const { tenantId } = req;
+    const analytics = await redis.get(`analytics:${tenantId}`);
+    res.json(analytics);
 });
 
 app.get('/api/admin/analytics', authenticate, requireMasterAdmin, async (req, res) => {
@@ -530,169 +537,270 @@ app.get('/api/admin/analytics', authenticate, requireMasterAdmin, async (req, re
         const tenants = await Promise.all(tenantKeys.map(key => redis.get(key)));
         const allAnalytics = {};
         for (const tenant of tenants) {
-            allAnalytics[tenant.id] = await redis.get(`analytics:${tenant.id}`);
+            if (tenant && tenant.id) {
+                const analytics = await redis.get(`analytics:${tenant.id}`);
+                if (analytics) {
+                    allAnalytics[tenant.id] = analytics;
+                }
+            }
         }
         return res.json(allAnalytics);
     }
 });
 
-app.get('/api/admin/all-configs', authenticate, requireMasterAdmin, async (req, res) => {
-    const tenantKeys = await redis.keys('tenant:*');
-    const tenants = await Promise.all(tenantKeys.map(key => redis.get(key)));
-    const allConfigs = {};
-    for (const tenant of tenants) {
-        allConfigs[tenant.id] = await redis.get(`config:${tenant.id}`);
+app.post('/api/visit', async (req, res) => {
+  const { tenant } = req.query;
+  const { path, referrer } = req.body;
+
+  if (!tenant) {
+    return res.status(400).json({ error: 'Tenant ID is required.' });
+  }
+
+  try {
+    const visits = await redis.get(`analytics:${tenant}:visits`);
+    const clicks = await redis.get(`analytics:${tenant}:clicks`);
+
+    // Log the incoming visit data
+    console.log('Incoming visit data:', { path, referrer });
+
+    // Update visits
+    if (path) {
+      visits.push({ path, timestamp: new Date().toISOString() });
     }
-    res.json(allConfigs);
+
+    // Update clicks (assuming referrer is the clicked link)
+    if (referrer) {
+      clicks.push({ referrer, timestamp: new Date().toISOString() });
+    }
+
+    await redis.set(`analytics:${tenant}:visits`, visits);
+    await redis.set(`analytics:${tenant}:clicks`, clicks);
+
+    res.json({ visits: visits || [], clicks: clicks || [] });
+  } catch (error) {
+    console.error('Error fetching analytics data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
+// --- User Routes ---
+
+// GET /api/admin/users - Master admin: Get all users
+app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) => {
+    const userKeys = await redis.keys('user:*');
+    const users = await Promise.all(userKeys.map(key => redis.get(key)));
+    res.json(users.filter(Boolean));
+});
+
+// GET /api/users - Tenant admin: Get users for their tenant
 app.get('/api/users', authenticate, async (req, res) => {
     const tenant = req.tenant;
+    if (!tenant || !tenant.users) {
+        return res.json([]);
+    }
     const userKeys = tenant.users;
-    const users = await Promise.all(userKeys.map(userId => {
-        // This is inefficient. A better data model would store user emails in the tenant.
-        return redis.keys(`user:*`).then(keys => {
-            return Promise.all(keys.map(key => redis.get(key)));
-        }).then(allUsers => {
-            return allUsers.find(u => u.id === userId);
-        });
+    const users = await Promise.all(userKeys.map(async userId => {
+        const allUserKeys = await redis.keys('user:*');
+        for (const userKey of allUserKeys) {
+            const user = await redis.get(userKey);
+            if (user && user.id === userId) {
+                return user;
+            }
+        }
+        return null;
     }));
     res.json(users.filter(Boolean));
 });
 
+// POST /api/users/invite - Invite a new user
 app.post('/api/users/invite', authenticate, async (req, res) => {
-    const { email } = req.body;
-    const tenant = req.tenant;
+    const { email, tenantId, sendWelcomeEmail } = req.body;
+    let tenantToInviteTo;
 
-    // Check if user already exists
+    if (req.user.role === 'master-admin' && tenantId) {
+        const tenantKeys = await redis.keys('tenant:*');
+        for (const key of tenantKeys) {
+            const t = await redis.get(key);
+            if (t.id === tenantId) {
+                tenantToInviteTo = t;
+                break;
+            }
+        }
+    } else {
+        tenantToInviteTo = req.tenant;
+    }
+
+    if (!tenantToInviteTo) {
+        return res.status(404).json({ success: false, message: 'Tenant not found.' });
+    }
+
     const existingUser = await redis.get(`user:${email}`);
     if (existingUser) {
-        // Add user to tenant if not already a member
-        if (!existingUser.tenants.includes(tenant.id)) {
-            existingUser.tenants.push(tenant.id);
+        if (!existingUser.tenants.includes(tenantToInviteTo.id)) {
+            existingUser.tenants.push(tenantToInviteTo.id);
             await redis.set(`user:${email}`, existingUser);
         }
     } else {
-        // Create new user
         const userId = `user_${Date.now()}`;
         await redis.set(`user:${email}`, {
             id: userId,
             email,
-            tenants: [tenant.id],
+            tenants: [tenantToInviteTo.id],
             role: 'user',
         });
-        
-        tenant.users.push(userId);
-        await redis.set(`tenant:${tenant.name}`, tenant);
+        tenantToInviteTo.users.push(userId);
+        await redis.set(`tenant:${tenantToInviteTo.name}`, tenantToInviteTo);
     }
 
-    // Send invite email
-    try {
-        const baseUrl = getBaseUrl(req);
-        await resend.emails.send({
-            from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
-            to: email,
-            subject: `You've been invited to ${tenant.displayName} on linkreach.xyz`,
-            html: `
+    if (sendWelcomeEmail) {
+        try {
+            const baseUrl = getBaseUrl(req);
+            await resend.emails.send({
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                to: email,
+                subject: `You've been invited to ${tenantToInviteTo.displayName} on linkreach.xyz`,
+                html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
     <div style="margin-bottom: 20px;">
         <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
         <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
     </div>
   <h2>You've been invited!</h2>
-  <p>You have been invited to join the "${tenant.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
+  <p>You have been invited to join the "${tenantToInviteTo.displayName}" workspace on linkreach.xyz. You can now log in to manage links and track their performance.</p>
   <p style="margin: 20px 0;">
     <a href="${baseUrl}/login?invited=true" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Activate Your Account</a>
   </p>
   <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
 </div>
 `,
-        });
-    } catch (error) {
-        console.error('Error sending invite email:', error);
+            });
+        } catch (error) {
+            console.error('Error sending invite email:', error);
+        }
     }
 
     res.json({ success: true });
 });
 
-app.put('/api/users/:id', authenticate, async (req, res) => {
+// POST /api/users/:id/send-magic-link - Send a magic link to a user
+app.post('/api/users/:id/send-magic-link', authenticate, async (req, res) => {
     const { id } = req.params;
-    const { email, firstName, lastName, disabled } = req.body;
-    
-    // This is highly inefficient. A proper user ID -> user email mapping is needed.
     const userKeys = await redis.keys('user:*');
-    let userKey = null;
     let user = null;
     for (const key of userKeys) {
         const u = await redis.get(key);
         if (u.id === id) {
-            userKey = key;
             user = u;
             break;
         }
     }
 
     if (user) {
-        user.firstName = firstName;
-        user.lastName = lastName;
-        user.disabled = disabled;
-        
-        // Handle email change
-        if (email !== user.email) {
-            await redis.del(userKey);
-            user.email = email;
-            await redis.set(`user:${email}`, user);
-        } else {
-            await redis.set(userKey, user);
+        const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '15m' });
+        const host = req.headers.host;
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const magicLink = `${protocol}://${host}/api/auth/verify?token=${token}`;
+
+        try {
+            await resend.emails.send({
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'updates@manzone.org'}>`,
+                to: user.email,
+                subject: 'Your Login Link for linkreach.xyz',
+                html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
+    </div>
+  <h2>Log in to your account</h2>
+  <p>Hello,</p>
+  <p>An administrator requested a link to log in to your account. Click the button below to sign in.</p>
+  <p style="margin: 20px 0;">
+    <a href="${magicLink}" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
+  </p>
+  <p>This link will expire in 15 minutes. If you did not request this email, you can safely ignore it.</p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
+  <hr style="border: none; border-top: 1px solid #eee;">
+  <p style="font-size: 0.8em; color: #939598;">
+    If you're having trouble with the button above, copy and paste the URL below into your web browser:<br>
+    <a href="${magicLink}" style="color: #52b8da;">${magicLink}</a>
+  </p>
+</div>
+`,
+          });
+          res.json({ success: true });
+        } catch (error) {
+          console.error('Error sending magic link:', error);
+          res.status(500).json({ success: false, message: 'Error sending email.' });
         }
+    } else {
+        res.status(404).json({ success: false, message: 'User not found.' });
     }
-    res.json({ success: true });
 });
 
-app.delete('/api/users/:id', authenticate, async (req, res) => {
+// PUT /api/users/:id - Update a user's details
+app.put('/api/users/:id', authenticate, async (req, res) => {
     const { id } = req.params;
-    
+    const { email, firstName, lastName, disabled } = req.body;
     const userKeys = await redis.keys('user:*');
-    let userKey = null;
+    let userKeyToUpdate = null;
+    let userToUpdate = null;
     for (const key of userKeys) {
         const u = await redis.get(key);
         if (u.id === id) {
-            userKey = key;
+            userKeyToUpdate = key;
+            userToUpdate = u;
             break;
         }
     }
 
-    if (userKey) {
-        await redis.del(userKey);
+    if (userToUpdate) {
+        userToUpdate.firstName = firstName;
+        userToUpdate.lastName = lastName;
+        userToUpdate.disabled = disabled;
+        if (email !== userToUpdate.email) {
+            await redis.del(userKeyToUpdate);
+            userToUpdate.email = email;
+            await redis.set(`user:${email}`, userToUpdate);
+        } else {
+            await redis.set(userKeyToUpdate, userToUpdate);
+        }
     }
     res.json({ success: true });
 });
 
-app.get('/api/admin/users', authenticate, requireMasterAdmin, async (req, res) => {
+// DELETE /api/users/:id - Delete a user
+app.delete('/api/users/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
     const userKeys = await redis.keys('user:*');
-    const users = await Promise.all(userKeys.map(key => redis.get(key)));
-    res.json(users);
+    let userKeyToDelete = null;
+    let userToDelete = null;
+    for (const key of userKeys) {
+        const u = await redis.get(key);
+        if (u.id === id) {
+            userKeyToDelete = key;
+            userToDelete = u;
+            break;
+        }
+    }
+
+    if (userToDelete) {
+        await redis.del(userKeyToDelete);
+        for (const tenantId of userToDelete.tenants) {
+            const tenantKeys = await redis.keys('tenant:*');
+            for (const tenantKey of tenantKeys) {
+                const t = await redis.get(tenantKey);
+                if (t.id === tenantId) {
+                    t.users = t.users.filter(userId => userId !== id);
+                    await redis.set(tenantKey, t);
+                    break; 
+                }
+            }
+        }
+    }
+    res.json({ success: true });
 });
 
-// Temporary debug route: fetch a user by email from Redis.
-// WARNING: Disabled by default. Enable only for short-term debugging by
-// setting environment variable `ENABLE_DEBUG_ROUTES=true` in your deployment.
-app.get('/api/debug/user', async (req, res) => {
-  if (process.env.ENABLE_DEBUG_ROUTES !== 'true') {
-    return res.status(404).send('Not found');
-  }
-
-  const email = req.query.email;
-  if (!email) return res.status(400).json({ error: 'email query parameter required' });
-
-  try {
-    const user = await redis.get(`user:${email}`);
-    if (!user) return res.json({ found: false });
-    return res.json({ found: true, user });
-  } catch (err) {
-    console.error('Debug route error:', err);
-    return res.status(500).json({ error: 'internal error' });
-  }
+app.listen(3000, () => {
+  console.log('Server is running on port 3000');
 });
-
-module.exports = app;
