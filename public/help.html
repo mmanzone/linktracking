@@ -8,8 +8,8 @@
 </head>
 <body>
     <div class="main-container">
-        <div class="homepage-container">
-            <header class="homepage-header">
+        <div class="homepage-container" style="text-align: left;">
+            <header class="homepage-header" style="text-align: center;">
                 <img src="/images/linkreachxyz-logo.png" alt="linkreach.xyz logo" style="height: 112px; margin-bottom: 20px;">
                 <h1>Help & User Guide</h1>
                 <h2>Your comprehensive guide to LinkReach</h2>
@@ -25,23 +25,12 @@
                     <h3>Dashboard Overview</h3>
                     <p>Upon logging in as a Tenant Administrator, you'll be directed to your dashboard. Here you can:</p>
                     <ul>
-                        <li><strong>Manage Your Links:</strong> Add, edit, and remove the links that appear on your public landing page.</li>
                         <li><strong>Customize Your Page:</strong> Upload your organization's logo, select theme colors, and write a description that reflects your mission.</li>
+                        <li><strong>Manage Your Links:</strong> Add, edit, and remove the links that appear on your public landing page.</li>
+                        <li><strong>Manage Campaigns:</strong> Create and manage campaigns to customize which links are displayed during specific periods.</li>
                         <li><strong>View Analytics:</strong> Track visits to your landing page and clicks on your links to understand engagement and measure your outreach effectiveness.</li>
                         <li><strong>Manage Users:</strong> Invite new users to your tenant and manage their access.</li>
                     </ul>
-                </section>
-
-                <section class="help-section">
-                    <h3>Managing Links</h3>
-                    <p>Your LinkReach page serves as a hub for all your important online resources. To add a new link:</p>
-                    <ol>
-                        <li>Navigate to the 'Links' section in your dashboard.</li>
-                        <li>Click 'Add New Link'.</li>
-                        <li>Enter the URL and a descriptive title for your link.</li>
-                        <li>You can also specify a start and end date if the link is for a time-sensitive campaign or event.</li>
-                    </ol>
-                    <p>Links can be easily edited or deleted at any time from the 'Links' management area.</p>
                 </section>
 
                 <section class="help-section">
@@ -52,6 +41,37 @@
                         <li><strong>Display Name & Description:</strong> Update your organization's display name and write a compelling description that appears at the top of your page.</li>
                         <li><strong>Theme Colors:</strong> Choose primary and secondary colors that match your brand.</li>
                     </ul>
+                </section>
+
+                <section class="help-section">
+                    <h3>Managing Links</h3>
+                    <p>Your LinkReach page serves as a library for all your important online resources. Not all links in your library are always displayed on your public landing page; their display can be customized by date using Campaigns.</p>
+                    <p>To add a new link to your library:</p>
+                    <ol>
+                        <li>Navigate to the 'Links' section in your dashboard.</li>
+                        <li>Click 'Add New Link'.</li>
+                        <li>Enter the URL and a descriptive title for your link.</li>
+                    </ol>
+                    <p>From the 'Links' management area, you can also:</p>
+                    <ul>
+                        <li><strong>Disable Links:</strong> Temporarily hide a link from your public landing page without deleting it.</li>
+                        <li><strong>Reorder Links:</strong> Change the order in which links appear on your public landing page by moving them up or down.</li>
+                        <li><strong>Edit/Delete:</strong> Modify the URL or title of an existing link, or remove it entirely from your library.</li>
+                    </ul>
+                </section>
+
+                <section class="help-section">
+                    <h3>Campaigns Management</h3>
+                    <p>Campaigns allow you to control which links are active and displayed on your landing page during specific timeframes, perfect for events, promotions, or seasonal content.</p>
+                    <p>To create or manage a campaign:</p>
+                    <ol>
+                        <li>Navigate to the 'Campaigns' section in your dashboard.</li>
+                        <li>Click 'Create New Campaign' or select an existing one to edit.</li>
+                        <li>Define a start and end date for your campaign.</li>
+                        <li>Add the specific links from your library that you want to be active during this campaign period.</li>
+                        <li>Campaigns can be activated or deactivated as needed, allowing you to easily switch between different sets of links.</li>
+                    </ol>
+                    <p>Only links associated with an active campaign and falling within its date range will be displayed on your public landing page.</p>
                 </section>
 
                 <section class="help-section">
@@ -92,7 +112,7 @@
         <footer>
             <a href="/index.html">Home Page</a>
             <a href="/login">Get Started</a>
-            <a href="/help.html">Need Help?</a>
+            <a href="/help.html" target="_blank">Need Help?</a>
         </footer>
     </div>
 </body>
