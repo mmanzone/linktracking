@@ -14,6 +14,7 @@ const { Resend } = require('resend');
 
 const app = express();
 const resend = new Resend(process.env.RESEND_API_KEY);
+console.log(`Resend client initialized with key: ${process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 5) + '...' : 'NOT SET'}`);
 
 // --- Upstash Redis Client Setup ---
 const redis = new Redis({
