@@ -2,7 +2,7 @@
     "users": [
         {
             "id": "user_1",
-            "email": "matthias@menzone.org",
+            "email": "matthias@manzone.org",
             "tenants": [
                 "TENANT_1"
             ],
