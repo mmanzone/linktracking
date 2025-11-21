@@ -317,6 +317,18 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.get('/api/auth/verify', (req, res) => {
+    const { token } = req.query;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const sessionToken = jwt.sign({ email: decoded.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        res.cookie('session_token', sessionToken, { httpOnly: true, secure: true, maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
+        res.redirect('/admin.html');
+    } catch (error) {
+        res.status(401).send('Invalid or expired token.');
+    }
+});
+
 app.get('/api/tenants', authenticate, requireMasterAdmin, async (req, res) => {
     // In a real app with many tenants, you'd use SCAN or a secondary index.
     // For this example, we'll assume a small number of tenants.
