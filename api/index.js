@@ -263,8 +263,33 @@ app.post('/api/auth/login', async (req, res) => {
     console.log(`User found for email: ${email}`);
     
     if (user.disabled) {
-        console.log(`Login attempt for disabled user: ${email}`);
-        return res.status(403).json({ success: false, message: 'Account is disabled.' });
+        console.log(`Login attempt for disabled user: ${email} (account is disabled)`);
+        try {
+            const baseUrl = getBaseUrl(req);
+            await resend.emails.send({
+                from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'hello@linkreach.xyz'}>`,
+                to: email,
+                subject: 'Your LinkReach Account Status',
+                html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #294a7f; font-size: 24px; margin: 0; font-weight: bold; font-family: Arial, sans-serif; text-decoration: none;">linkreach.xyz</h1>
+        <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
+    </div>
+  <h2>Account Disabled</h2>
+  <p>Hello,</p>
+  <p style="color: red; font-weight: bold;">Your account for linkreach.xyz has been disabled.</p>
+  <p>Please contact your organization administrator to unlock it.</p>
+  <p style="font-family: Arial, sans-serif;">Thanks,<br>The LinkReach Team</p>
+</div>
+`,
+            });
+            return res.json({ success: true, message: 'If your email is registered, a status update has been sent.' });
+        } catch (error) {
+            console.error('Error sending disabled account email:', error);
+            // Even if email fails, we should still return a success message to prevent enumeration
+            return res.status(500).json({ success: false, message: 'Error sending status email.' });
+        }
     }
     
     user.lastLogin = new Date().toISOString();
@@ -278,6 +303,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     try {
       const baseUrl = getBaseUrl(req);
+      const greetingName = user.firstName ? user.firstName : '';
       await resend.emails.send({
         from: `"The LinkReach Team" <${process.env.EMAIL_FROM || 'hello@linkreach.xyz'}>`,
         to: email,
@@ -289,7 +315,7 @@ app.post('/api/auth/login', async (req, res) => {
         <p style="color: #939598; font-size: 14px; margin: 0; font-family: Arial, sans-serif; text-decoration: none;">TRACK YOUR IMPACT</p>
     </div>
   <h2>Log in to your account</h2>
-  <p>Hello,</p>
+  <p>Hello ${greetingName},</p>
   <p>You requested a link to log in to your account. Click the button below to sign in.</p>
   <p style="margin: 20px 0;">
     <a href="${magicLink}" style="background-color: #294a7f; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
@@ -303,7 +329,6 @@ app.post('/api/auth/login', async (req, res) => {
   </p>
 </div>
 `,
-      });
       console.log(`Magic link sent to: ${email}`);
       res.json({ success: true, message: 'Magic link sent.' });
     } catch (error) {
